@@ -1,184 +1,282 @@
 library(data.table)
 library(survival)
-#HOSPITAL CODE (Not in Current Workspace and not code for most current hospital dataset) 
-x = read.csv("HDS.csv")
-x = read.csv("Excel Tables/HDS_J_030813.csv")
-q = read.csv("E:/Data/Excel Tables/HDS_J_052813.csv")
+# #HOSPITAL CODE (Not in Current Workspace and not code for most current hospital dataset) 
+# x = read.csv("HDS.csv")
+# x = read.csv("Excel Tables/HDS_J_030813.csv")
+# q = read.csv("E:/Data/Excel Tables/HDS_J_052813.csv")
+# 
+# 
+# hid = unique(x[,2]); hid
+# OHATS = array(NA, dim=c(8,72))
+# f3=(as.numeric(as.character(x[,3])))
+# for(i in 1:72) { print(i);OHATS[,i] = f3[x[,2] == hid[i]]}
+# matplot(2004:2011,log( OHATS/(101-OHATS)) ,type="l", xlab = "YEAR", ylab= "LOGIT-PCT")
+# matplot(2004:2011,OHATS ,type="l", xlab = "YEAR", ylab= "SCORE")
+# 
+# #Need to find change point for each hospital (max 2 years) 
+# year = 2004:2011
+# 
+# Delta I
+# i  y0    y1  
+# 1 2004 2006 
+# 2 2004 2005
+# 3 2004 2006
+# 4 2004 2006
+# 5 2007 2009
+# 6 2004 2006
+# 7 2004 2005
+# 8 2006 2007
+# 9 2004 2005
+# 10 2005 2007
+# 11 2004 2005
+# 12 2005 2007
+# 13 2004 2005
+# 14 2007 2009
+# 15 2004 2006
+# 16 2007 2008
+# 17 2004 2006
+# 18 2006 2007
+# 19 2004 2006
+# 20 2007 2009
+# 21 2005 2007
+# 22 2005 2006
+# 23 2005 2007
+# 24 2004 2005 
+# 25 2004 2006
+# 26 2004 2006
+# 27 2005 2007
+# 28 2006 2007
+# 29 2005 2007
+# 30 2007 2008
+# 31 2007 2008
+# 32 2005 2007
+# 33 2005 2007
+# 34 2006 2008
+# 35 2006 2008
+# 36 2008 2009
+# 37 2005 2007
+# 38 2005 2007
+# 39 2004 2006
+# 40 2007 2008
+# 41 2004 2005
+# 42 2004 2005
+# 43 2004 2006
+# 44 2004 2005
+# 45 2004 2006
+# 46 2008 2009
+# 47 2005 2006
+# 48 2005 2007
+# 49 2006 2008
+# 50 2004 2006
+# 51 2004 2006 
+# 52 2004 2006
+# 53 2005 2007
+# 54 2004 2005
+# 55 2004 2006 
+# 56 2005 2007 
+# 57 2006 2008
+# 58 2008 2009
+# 59 2004 2005
+# 60 2004 2006
+# 61 2007 2009
+# 62 2004 2006
+# 63 2005 2007 
+# 64 2005 2007
+# 65 2004 2006
+# 66 2004 2005
+# 67 2005 2007
+# 68 2004 2005
+# 69 2007 2009
+# 70 2005 2006
+# 71 2004 2005
+# 72 2004 2006
+# 
+# 
+# pdf("grphs.pdf", width=9,height=7.5)
+# par(mfrow=c(6,6),mar=c(4,3,1,1))
+# for(i in 1:72)
+# plot(year,OHATS[,i],pch=20,col=2,xlab=as.character(hid[i]))
+# dev.off()
+# 
+# library(rpart)
+# rpart(OHATS[,1]~year,control=rpart.control(minbucket=2,minsplit=6,cp=0.00001))
+# 
+# 
+# z = array(NA, dim=c(8,72))
+# f3=(as.numeric(as.character(hds[,3])))	
+# for(i in 1:72) { print(i);z[,i] = f3[hds[,2] == u[i]]}
+# z[,i] = c(NA,f3[(x[,2] == u[i])])
+# matplot(2004:2011,log( z/(101-z)) ,type="l", xlab = "YEAR", ylab= "LOGIT-PCT",main=?Overall Score?)
+# matplot(2004:2011,z ,type="l", xlab = "YEAR", ylab= "SCORE",main=?Overall Score?)
+# 
+# 
+# z1 = z
+# z2 = t(t(z1) - z[1,])
+# matplot(2005:2011,z2 ,type="l", xlab = "YEAR", ylab= "SCORE",main="Overall Score")
+# 
+# 
+# #MIDAS CODE
+# md2 = read.csv("E:/midas.csv")
+# md2 = read.csv("midas.csv")
+# md = read.csv("C:/MIDAS/qcmidasfull.csv")
+# md0 =read.csv("C:/Users/J C/Documents/Kostis/Citron/Data/Excel Tables/miqcdatafullcomorb.csv")
+# md0 <- as.data.frame(copy(d1))
+# #md00=md0;
+# md1 = md0[,names(md)[-29]]
 
+################################################
+################################################
+# # DS 07/30/2016
+# save(md, file = "md.RData")
 
-hid = unique(x[,2]); hid
-OHATS = array(NA, dim=c(8,72))
-f3=(as.numeric(as.character(x[,3])))
-for(i in 1:72) { print(i);OHATS[,i] = f3[x[,2] == hid[i]]}
-matplot(2004:2011,log( OHATS/(101-OHATS)) ,type="l", xlab = "YEAR", ylab= "LOGIT-PCT")
-matplot(2004:2011,OHATS ,type="l", xlab = "YEAR", ylab= "SCORE")
+#ATTN!: Clean all and start with 'md' data set
+getwd()
+# Load data (preprocessed above)
+load("md.RData")
+md <- data.table(md)
 
-#Need to find change point for each hospital (max 2 years) 
-year = 2004:2011
+# Format data
+md$FIRSTMIDATE <- as.Date(md$FIRSTMIDATE, "%m/%d/%Y")
+md$FIRSTMIDSCDATE <- as.Date(md$FIRSTMIDSCDATE, "%m/%d/%Y")
+md$SECONDMIDATE <- as.Date(md$SECONDMIDATE, "%m/%d/%Y")
+md$SECONDMIDSCDATE <- as.Date(md$SECONDMIDATE, "%m/%d/%Y")
+md$THIRDMIDATE <- as.Date(md$THIRDMIDATE, "%m/%d/%Y")
+md$THIRDMIDSCDATE <- as.Date(md$THIRDMIDSCDATE, "%m/%d/%Y")
 
-Delta I
-i  y0    y1  
-1 2004 2006 
-2 2004 2005
-3 2004 2006
-4 2004 2006
-5 2007 2009
-6 2004 2006
-7 2004 2005
-8 2006 2007
-9 2004 2005
-10 2005 2007
-11 2004 2005
-12 2005 2007
-13 2004 2005
-14 2007 2009
-15 2004 2006
-16 2007 2008
-17 2004 2006
-18 2006 2007
-19 2004 2006
-20 2007 2009
-21 2005 2007
-22 2005 2006
-23 2005 2007
-24 2004 2005 
-25 2004 2006
-26 2004 2006
-27 2005 2007
-28 2006 2007
-29 2005 2007
-30 2007 2008
-31 2007 2008
-32 2005 2007
-33 2005 2007
-34 2006 2008
-35 2006 2008
-36 2008 2009
-37 2005 2007
-38 2005 2007
-39 2004 2006
-40 2007 2008
-41 2004 2005
-42 2004 2005
-43 2004 2006
-44 2004 2005
-45 2004 2006
-46 2008 2009
-47 2005 2006
-48 2005 2007
-49 2006 2008
-50 2004 2006
-51 2004 2006 
-52 2004 2006
-53 2005 2007
-54 2004 2005
-55 2004 2006 
-56 2005 2007 
-57 2006 2008
-58 2008 2009
-59 2004 2005
-60 2004 2006
-61 2007 2009
-62 2004 2006
-63 2005 2007 
-64 2005 2007
-65 2004 2006
-66 2004 2005
-67 2005 2007
-68 2004 2005
-69 2007 2009
-70 2005 2006
-71 2004 2005
-72 2004 2006
+range(md$FIRSTMIDATE, na.rm = TRUE)
+range(md$FIRSTMIDSCDATE, na.rm = TRUE)
+range(md$SECONDMIDATE, na.rm = TRUE)
+range(md$SECONDMIDSCDATE, na.rm = TRUE)
+range(md$THIRDMIDATE, na.rm = TRUE)
+range(md$THIRDMIDSCDATE, na.rm = TRUE)
 
+# Birthdate
+md$PATBDTE <- as.Date(md$PATBDTE, origin = "1960-01-01")
+range(md$PATBDTE, na.rm = TRUE)
 
-pdf("grphs.pdf", width=9,height=7.5)
-par(mfrow=c(6,6),mar=c(4,3,1,1))
-for(i in 1:72)
-plot(year,OHATS[,i],pch=20,col=2,xlab=as.character(hid[i]))
-dev.off()
+# Age at 1st MI
+md$FIRSTMIAGE <- as.numeric(as.character(floor(difftime(md$FIRSTMIDSCDATE, md$PATBDTE, units = "days")/365.25)))
+hist(md$FIRSTMIAGE)
+range(md$FIRSTMIAGE, na.rm = TRUE)
+# Remove anybody younger than 20
+md <- subset(md, FIRSTMIAGE >= 20)
+hist(md$FIRSTMIAGE)
 
-library(rpart)
-rpart(OHATS[,1]~year,control=rpart.control(minbucket=2,minsplit=6,cp=0.00001))
+# Death
+md$NEWDTD <- as.Date(md$NEWDTD, origin = "1960-01-01")
+range(md$NEWDTD, na.rm = TRUE)
+md$DEATHAGE <- as.numeric(as.character(floor(difftime(md$NEWDTD, md$PATBDTE, units = "days")/365.25)))
+hist(md$DEATHAGE)
 
+# Hospital number
+md$FIRSTMIHOSP <- as.numeric(as.character(md$FIRSTMIHOSP))
+md$SECONDMIHOSP <- as.numeric(as.character(md$SECONDMIHOSP))
+md$THIRDMIHOSP <- as.numeric(as.character(md$THIRDMIHOSP))
 
-z = array(NA, dim=c(8,72))
-f3=(as.numeric(as.character(hds[,3])))	
-for(i in 1:72) { print(i);z[,i] = f3[hds[,2] == u[i]]}
-z[,i] = c(NA,f3[(x[,2] == u[i])])
-matplot(2004:2011,log( z/(101-z)) ,type="l", xlab = "YEAR", ylab= "LOGIT-PCT",main=?Overall Score?)
-matplot(2004:2011,z ,type="l", xlab = "YEAR", ylab= "SCORE",main=?Overall Score?)
+###################################################
+md
+hn = 64
+y1 = 2005
+y2 = 2007
 
-
-z1 = z
-z2 = t(t(z1) - z[1,])
-matplot(2005:2011,z2 ,type="l", xlab = "YEAR", ylab= "SCORE",main="Overall Score")
-
-
-#MIDAS CODE
-md2 = read.csv("E:/midas.csv")
-md2 = read.csv("midas.csv")
-md = read.csv("C:/MIDAS/qcmidasfull.csv")
-md0 =read.csv("C:/Users/J C/Documents/Kostis/Citron/Data/Excel Tables/miqcdatafullcomorb.csv")
-md0 <- as.data.frame(copy(d1))
-#md00=md0;
-md1 = md0[,names(md)[-29]]
-# Function that does teh analysis
-hospfun = function(md,hn,y1,y2) {
-y1= 2004 ; y2 = 2006;hn=1;
-  md64 = md1[md1$FIRSTMIHOSP == hn,]
-md64$dt1disc = as.Date(as.character(md64[,5]),"%m/%d/%Y")
-md64$dtbirth= as.Date(md64[,2],origin = "1960-01-01")
-md64$age = as.numeric((md64$dt1disc-md64$dtbirth)/365)
-md64$dtdeath = as.Date(md64[,1],origin = "1960-01-01")
-#md64$dtdeath = as.Date(as.character(md64[,1]),"%d%B%Y")
-md64$agedeath = as.numeric((md64$dtdeath-md64$dtbirth)/365)
-md64$dt2mi = as.Date(as.character(md64[,10]),"%m/%d/%Y")
-md64$censored = (!is.na(md64$dtdeath) & (md64$dtdeath>=md64$dt1disc)) & is.na(md64$dt2mi)
-
-dy64 = substring(md64$dt1disc,1,4)
-dy64a = dy64 == as.character(y1)
-dy64a[is.na(dy64a)] = F
-md64a = md64[dy64a,]
-sdd64 = md64a$dt2mi
-i1 = is.na(sdd64)
-sdd64[i1] = maxdat2
-md64a$smi = sdd64
-md64a$smidd = as.numeric(md64a$smi-md64a$dt1disc) 
-
-md64b = md[md$FIRSTMIHOSP == hn,]
-d64 = as.character(md64b[,5])
-dd64 = as.Date(d64,"%d%B%Y")
-bdt = as.Date(as.character(md64b[,2]),"%d%B%Y")
-md64b$age = as.numeric((dd64-bdt)/365)
-dy64 = substring(dd64,1,4)
-dy64a = dy64 == as.character(y2)
-dy64a[is.na(dy64a)] = F
-md64b$dd = dd64
-md64b = md64b[dy64a,]
-sdd64 = as.Date(as.character(md64b[,10]),"%d%B%Y")
-i2 = is.na(sdd64)
-sdd64[i2] = maxdat2
-#correct for death 
-md64b$smi = sdd64
-md64b$smidd = as.numeric(md64b$smi-md64b$dd) 
-#boxplot(narm(md64a$smidd), narm(md64b$smidd),names=as.character(c(y1,y2)),sub=hn)
-#t.test(narm(md64b$smidd), narm(md64a$smidd))
-data = data.frame(status=1-c(i1,i2),rbind( cbind(age=md64a$age,year=y1,sdmi=md64a$smidd),
-       cbind(age=md64b$age,year=y2,sdmi=md64b$smidd )))
- a =summary(aa<-coxph(Surv(sdmi, status) ~ age+ factor(year), data=data))
-c(a$coef[2,], a$conf.int[2,])
+hospfun <- function(md, hn, y1, y2){
+  # CHECK WITH JAVIER!
+  maxdat2 <- max(md$NEWDTD, na.rm = TRUE) + 1
+  
+  md.i <- md[md$FIRSTMIHOSP == hn, ]
+  md.i$dt1disc <- md.i$FIRSTMIDSCDATE
+  md.i$dtbirth <- md.i$PATBDTE
+  md.i$age <- md.i$FIRSTMIAGE
+  md.i$dtdeath <- md.i$NEWDTD
+  md.i$agedeath <- md.i$DEATHAGE
+  md.i$dt2mi <- md.i$SECONDMIDSCDATE
+  md.i$censored <- (!is.na(md.i$dtdeath) & 
+                      (md.i$dtdeath >= md.i$dt1disc)) & 
+    is.na(md.i$dt2mi)
+  
+  # Death year
+  dy.i = substring(md.i$dt1disc, 1, 4)
+  dy.i.a = dy.i == as.character(y1)
+  dy.i.a[is.na(dy.i.a)] = F
+  md.i.a = md.i[dy.i.a,]
+  sdd.i = md.i.a$dt2mi
+  i1 = is.na(sdd.i)
+  sdd.i[i1] = maxdat2
+  md.i.a$smi = sdd.i
+  md.i.a$smidd = as.numeric(md.i.a$smi-md.i.a$dt1disc) 
+  
+  md.i.b = md[md$FIRSTMIHOSP == hn,]
+  dd.i <- md.i.b$FIRSTMIDSCDATE
+  bdt = md.i.b$PATBDTE
+  md.i.b$age <- md.i.b$FIRSTMIAGE
+  dy.i = substring(dd.i,1,4)
+  dy.i.b = dy.i == as.character(y2)
+  dy.i.b[is.na(dy.i.b)] = F
+  md.i.b$dd = dd.i
+  md.i.b = md.i.b[dy.i.b,]
+  sdd.i = md.i.b$SECONDMIDSCDATE
+  i2 = is.na(sdd.i)
+  sdd.i[i2] = maxdat2
+  #correct for death 
+  md.i.b$smi = sdd.i
+  md.i.b$smidd = as.numeric(md.i.b$smi-md.i.b$dd) 
+  
+  # # CHECKPOINT:
+  # boxplot(md64a$smidd[!is.na(md64a$smidd)],
+  #         md64b$smidd[!is.na(md64b$smidd)],
+  #         names = as.character(c(y1,y2)),
+  #         sub = hn)
+  # t.test(md64a$smidd[!is.na(md64a$smidd)],
+  #        md64b$smidd[!is.na(md64b$smidd)])
+  
+  data = data.frame(status = 1-c(i1,i2),
+                    rbind(cbind(age = md.i.a$age,
+                                year = y1,
+                                sdmi = md.i.a$smidd),
+                          cbind(age = md.i.b$age,
+                                year = y2,
+                                sdmi = md.i.b$smidd)))
+  a =summary(aa<-coxph(Surv(sdmi, status) ~ age+ factor(year), data=data))
+  c(a$coef[2,], a$conf.int[2,])
 }
-res = NULL
-par(mfrow=c(3,3),mar=c(5,4,2,2))
-hn=64
-yy= 2004
+
+hospfun(md, 1, 1994, 2010)
+res <- list()
+for (j in 1:(max(md$FIRSTMIHOSP, na.rm = TRUE))) {
+  for(i in 1995:2010) {
+    a <- hospfun(md, j, 1994, i)
+    res[[j]] <- rbind(res,c(hn = j, 
+                       year = yy,a))
+  }
+}
+
+
+
+#################################################################
 for(yy in 2000:2008){
-a = hospfun(md0,hn,yy,yy+2)
-res=rbind(res,c(hn=hn, year=yy,a))
+a = hospfun(md, hn, yy, yy + 2)
+res=rbind(res,c(hn = hn, 
+                year = yy,a))
 #res = rbind(res, c(hn=hn,year=yy, round(c(u$est,cidiff=u$conf, pv=u$p.v),5)))
 }
 
+# Plot
+require(ggplot2)
+res <- data.frame(res)
+tmp <- res[, c(1:2, 8, 10:11)]
+names(tmp)[3:5] <- c("est", "lb", "ub")
+
+ggplot(tmp, 
+       aes(x = year, 
+           y = est)) + 
+  geom_line() +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = lb, 
+                    ymax = ub),
+                colour = "black", 
+                width = .1) 
+
+#####################################################
 #Death
 bdt = as.Date(as.character(md64[,2]),"%d%B%Y")
 dth64 = as.Date(as.character(md64[,1]),"%d%B%Y")
@@ -297,13 +395,11 @@ par(mfrow=c(3,3),mar=c(5,4,2,2))
 
 #res = NULL
 for( hn in hospn[67]) {
-for(yy in 2000:2008){
-u=hospfunc(md,hn,yy,yy+2)
-res = rbind(res, c(hn=hn,year=yy, round(u,5)))
+  for(yy in 2000:2008){
+    u=hospfunc(md,hn,yy,yy+2)
+    res = rbind(res, c(hn=hn,year=yy, round(u,5)))
+  }
 }
-}
- hospn = nospn[!is.na(nospn)] 
- nospn = unique(md$FIRSTMIHOSP)
 
 res01 = NULL
 #for( hn in hospn[72]) {
