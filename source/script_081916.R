@@ -241,6 +241,7 @@ p1 <- ggplot(tt,
         axis.text.x = element_text(angle = 0,
                                    hjust = 1)) +
   ggtitle("Comparison of 30 Day Readmissions") 
+p1
 
 # By gender
 tt <- table(dd$sex, dd$readm30)
@@ -285,9 +286,16 @@ dd$year <- factor(dd$year)
 
 # Overall model: all years against 2004
 dd$years.from.2004 <- as.numeric(as.character(dd$year)) - 2004
-m1 <- coxph(Surv(days2mi2, m2) ~ years.from.2004 + overall, data = dd)
+m1 <- coxph(Surv(days2mi2, m2) ~ overall + years.from.2004, data = dd)
 m1
-summary(m1)
+s1 <- summary(m1)
+tt1 <- data.table(Covariate = c("Overall Score",
+                                "Years From 2004"),
+                  s1$conf.int[,c(1, 3, 4)], 
+                  pVal = s1$coefficients[, 5])
+tt1
+write.csv(tt1, "tmp/tt1.csv")
+
 plot(survfit(m1),
      mark.time = FALSE,
      col = "blue",
@@ -298,9 +306,16 @@ plot(survfit(m1),
      xlab = "Days from 1st MI",
      ylab = "Propostion Without Events")
 
-m2 <- coxph(Surv(days2mi2, m2) ~ year, data = dd)
+#######################
+m2 <- coxph(Surv(days2mi2, m2) ~ overall + year, data = dd)
 m2
-summary(m2)
+s2 <- summary(m2)
+tt2 <- data.frame(s2$conf.int[,c(1, 3, 4)], 
+                  pVal = s2$coefficients[, 5])
+tt2
+write.csv(tt2, "tmp/tt2.csv")
+
+
 m2 <- survfit(Surv(days2mi2, m2) ~ year, data = dd)
 plot(m2,
      mark.time = FALSE,
@@ -325,27 +340,68 @@ plot(dd$overall ~ dd$score.range,
      xlab = "Score Range",
      ylab = "Overall Score")
 
-m3 <- coxph(Surv(days2mi2, m2) ~ as.numeric(year) + age + sex + teach + score.range + overall, data = dd)
+# Put NA for hospitals unspecified for teaching
+dd$teach[dd$teach == "NO DATA"] <- NA
+dd <- droplevels(dd)
+table(dd$teach)
+
+# m3 <- coxph(Surv(days2mi2, m2) ~ as.numeric(year) + age + sex + teach + score.range + overall, data = dd)
+m3 <- coxph(Surv(days2mi2, m2) ~ overall + as.numeric(year) + age + sex + teach, data = dd)
 m3
-summary(m3)
+s3 <- summary(m3)
+tt3 <- data.table(Covariate = c("Overall Score",
+                                "Year of First MI",
+                                "Age at First MI",
+                                "Male",
+                                "Teaching Hospital"),
+                  s3$conf.int[,c(1, 3, 4)], 
+                  pVal = s3$coefficients[, 5])
+tt3
+write.csv(tt3, "tmp/tt3.csv")
+tt3$Covariate <- factor(tt3$Covariate, 
+                        levels = c("Overall Score",
+                                   "Year of First MI",
+                                   "Age at First MI",
+                                   "Male",
+                                   "Teaching Hospital"))
 
-##############################################################
-# Compare only 2001 and 2003
-tmp <- droplevels(subset(dd, year %in% c(2005, 2007)))
-m2 <- coxph(Surv(days2mi2, m2) ~ overall + year, data = tmp)
-m2
-summary(m2)
+ggplot(tt3) +
+  geom_point(aes(x = Covariate,
+                 y = `exp(coef)`,
+                 color = "red"),
+             size = 3) +
+  geom_hline(yintercept = 1,
+             linetype = "dashed") +
+  ggtitle(paste("Hazard Ratios of MI Recurrence")) +
+  theme(legend.position = "none") + 
+  geom_errorbar(aes(x = Covariate,
+                    ymin = `lower .95`,
+                    ymax = `upper .95`),
+                colour = "black",
+                width = .1) +
+  scale_colour_discrete(guide = FALSE) +
+  scale_x_discrete("Risk Factor") + 
+  scale_y_continuous("Hazard Ratio") + 
+  theme(axis.text.x = element_text(angle = 30, 
+                                   hjust = 1))
 
-m21 <- survfit(Surv(days2mi2, m2) ~ year, data = tmp)
-plot(m21, 
-     mark.time = FALSE,
-     conf.int = TRUE,
-     col = c("red", "blue"))
-
-legend("topright", 
-       legend = levels(tmp$year),
-       lty = 1,
-       col = c("red", "blue"))
+# ##############################################################
+# # Compare only 2001 and 2003
+# tmp <- droplevels(subset(dd, year %in% c(2005, 2007)))
+# m2 <- coxph(Surv(days2mi2, m2) ~ overall + year, data = tmp)
+# m2
+# summary(m2)
+# 
+# m21 <- survfit(Surv(days2mi2, m2) ~ year, data = tmp)
+# plot(m21, 
+#      mark.time = FALSE,
+#      conf.int = TRUE,
+#      col = c("red", "blue"))
+# 
+# legend("topright", 
+#        legend = levels(tmp$year),
+#        lty = 1,
+#        col = c("red", "blue"))
 
 ###############################################
 # Loop through years
@@ -500,7 +556,7 @@ for (j in 1:length(hosp)) {
 }
 hr <- do.call("rbind", res)
 hr <- data.table(hr)
-
+hr
 # Remove bad fits
 hr <- hr[is.finite(hr$`upper .95`),]
 hrr <- subset(hr, select = c(1:2, 8, 10:11))
@@ -543,8 +599,6 @@ jj <- matrix(hosp,
 # for (i in 1:ncol(jj)) {
 for (i in hosp) {
   out <- try({
-    # j <- hosp[jj[, i]]
-    # tmp <- subset(hrr, hn %in% j)
     tmp <- subset(hrr, hn == i)
     
     # Rescale
@@ -552,46 +606,33 @@ for (i in hosp) {
                              range(c(tmp$lb, 
                                      tmp$ub), 
                                    na.rm = TRUE),
-                             range(c(tmp$overall, 
-                                     tmp$smoke), 
+                             range(c(tmp$overall), 
                                    na.rm = TRUE))
     tmp$lb.scaled <- rescale(tmp$lb,
                              range(c(tmp$lb, 
                                      tmp$ub), 
                                    na.rm = TRUE),
-                             range(c(tmp$overall, 
-                                     tmp$smoke), 
+                             range(c(tmp$overall), 
                                    na.rm = TRUE))
     tmp$ub.scaled <- rescale(tmp$ub,
                              range(c(tmp$lb, 
                                      tmp$ub), 
                                    na.rm = TRUE),
-                             range(c(tmp$overall, 
-                                     tmp$smoke), 
+                             range(c(tmp$overall), 
                                    na.rm = TRUE))
     hr.1 <- rescale(1,
                     range(c(tmp$lb, 
                             tmp$ub), 
                           na.rm = TRUE),
-                    range(c(tmp$overall, 
-                            tmp$smoke), 
+                    range(c(tmp$overall), 
                           na.rm = TRUE))
     p1 <- ggplot(tmp) +
-      # facet_wrap(~ hn,
-      #            ncol = 3) +
       geom_line(aes(x = year,
                     y = overall,
                     color = "blue")) +
       geom_point(aes(x = year,
                      y = overall,
                      color = "blue"),
-                 size = 3) +
-      geom_line(aes(x = year,
-                    y = smoke,
-                    color = "green")) +
-      geom_point(aes(x = year,
-                     y = smoke,
-                     color = "green"),
                  size = 3) +
       geom_line(aes(x = year,
                     y = hr.scaled,
@@ -609,10 +650,8 @@ for (i in hosp) {
                label = "HR = 1") +
       scale_colour_manual(name = "Scores:",
                           values = c("blue",
-                                     "green",
                                      "red"),
                           labels = c("Overall",
-                                     "Smoking",
                                      "MI HR")) +
       theme(legend.position = "top") + 
       geom_errorbar(aes(x = year,
@@ -620,19 +659,6 @@ for (i in hosp) {
                         ymax = ub.scaled),
                     colour = "black",
                     width = .1)
-    # # Second y-axis: FIND A WAY!
-    # p2 <- ggplot(data.frame(y = c(tmp$lb, tmp$ub),
-    #                         x = rep(0, 2*nrow(tmp))),
-    #              aes(x, y)) +
-    #   geom_blank() +
-    #   theme(axis.line.x=element_blank(),
-    #         axis.text.x=element_blank(),
-    #         axis.ticks.x=element_blank(),
-    #         axis.title.x=element_blank(),
-    #         panel.grid.minor.x=element_blank(),
-    #         panel.grid.major.x=element_blank())
-    #   
-    # grid.arrange(p1, p2,cols=2)
   })
   if(class(out)[1] != "try-error") {
     try({
