@@ -7,7 +7,7 @@ require(gridExtra)
 
 # Scores
 scores.mi <- fread("data\\NJ HOSPITALS_Heart Attack Scores.csv")
-scores.hf <- fread("data\\NJ HOSPITALS_Heart Attack Scores.csv")
+scores.hf <- fread("data\\NJ HOSPITALS_Heart Failure Scores.csv")
 
 scores.mi <- droplevels(subset(scores.mi, 
                                subset = !is.na(scores.mi$`Report Year`) &
@@ -21,7 +21,12 @@ scores.hf <- droplevels(subset(scores.hf,
                                  scores.hf$Secondary == 0, 
                                select = c(1:3, 8, 13:14)))
 
-names(scores.mi) <- names(scores.hf) <- c("year", "hosp", "hn", "beds", "teach", "overall")
+names(scores.mi) <- names(scores.hf) <- c("year", 
+                                          "hosp", 
+                                          "hn",
+                                          "beds", 
+                                          "teach",
+                                          "overall")
 
 # MIs
 scores <- scores.mi
@@ -30,6 +35,14 @@ scores$teach <- factor(scores$teach)
 scores$overall <- as.numeric(scores$overall)
 scores$hn <- as.numeric(scores$hn)
 scores$year <- as.numeric(scores$year)
+
+# DS 10/15/2016: remove OVERALL = NA records
+scores <- droplevels(subset(scores, !is.na(overall)))
+
+# Score range for each hospital, from 2004 to current year
+scores[, dscore := cummax(overall) - cummin(overall), 
+       by = hn]
+scores[, score.range := diff(range(overall, na.rm = TRUE)), by = hn]
 scores
 summary(scores)
 
@@ -38,6 +51,7 @@ length(unique(scores$hn))
 uhs <- unique(scores$hn)[order(unique(scores$hn))]
 uhs
 
+####################################################################
 # # NOTE: REMOVE THIS PART WHEN HOSP DIVISIONS ARE ADDED TO MD DATASET!
 # scores[, mu := mean(overall, na.rm = TRUE),
 #        by = c("year", "hn")]
@@ -118,7 +132,7 @@ hist(md$DEATHAGE)
 md$FIRSTMIHOSP <- as.numeric(as.character(md$FIRSTMIHOSP))
 md$SECONDMIHOSP <- as.numeric(as.character(md$SECONDMIHOSP))
 md$THIRDMIHOSP <- as.numeric(as.character(md$THIRDMIHOSP))
-
+range(md$FIRSTMIDSCDATE)
 #############################################################
 maxdat <- as.Date("2015-01-01")
 # CHECKPOINT
@@ -140,7 +154,8 @@ ndx.dead <- which(!is.na(md$NEWDTD) &
                     md$NEWDTD < maxdat) 
 md$SECONDMIDATE[ndx.dead] <- md$NEWDTD[ndx.dead] 
 
-dd <- data.table(days2mi2 = as.numeric(difftime(md$SECONDMIDATE,
+dd <- data.table(id = md$PATIENT_ID,
+                 days2mi2 = as.numeric(difftime(md$SECONDMIDATE,
                                                 md$FIRSTMIDATE,
                                                 units = "days")),
                  m2date = md$SECONDMIDATE,
@@ -189,6 +204,8 @@ t3 <- melt(t3,
            variable.name = "Year",
            value.name = "Readmissions")
 t3
+aggregate(t3$Readmissions, by = list(t3$Day), FUN = sum)
+aggregate(t3$Readmissions, by = list(t3$Year), FUN = sum)
 number_ticks <- function(n) {function(limits) pretty(limits, n)}
 ggplot(t3,
        aes(x = Day,
@@ -198,7 +215,17 @@ ggplot(t3,
            stat="identity") +
   scale_x_continuous(name = "Days From First MI",
                      breaks = 0:13) +
-  ggtitle("MI Readmissons by Year of First MI") 
+  ggtitle("MI Readmissons by Days from First MI") 
+
+ggplot(t3,
+       aes(x = Year,
+           y = Readmissions,
+           fill = Day)) +
+  geom_bar(position = "stack",
+           stat="identity") +
+  scale_x_discrete(name = "MI Year",
+                   breaks = 0:10) +
+  ggtitle("MI Readmissons by Year of First MI in the First 13 Days") 
 
 # Matching with 'Diagnoses in Timing of 30-Day Readmissions 
 # After Hospitalization for Heart Failure, Acute Myocardial Infarction, 
@@ -264,6 +291,7 @@ p2 <- ggplot(tt,
         axis.text.x = element_text(angle = 0,
                                    hjust = 1)) +
   ggtitle("Comparison of 30 Day Readmissions") 
+p2
 
 gridExtra::grid.arrange(p1, p2, nrow = 1)
 
@@ -280,20 +308,236 @@ dd$m2 <- FALSE
 dd$m2[dd$m2date < maxdat] <- TRUE
 summary(dd$m2)
 
+#############################################################
 # Merge with scores
 dd <- merge(dd, scores, by = c("hn", "year"))
 dd$year <- factor(dd$year)
+range(as.numeric(as.character(dd$year)))
+# Put NA for hospitals unspecified for teaching
+dd$teach[dd$teach == "NO DATA"] <- NA
+dd <- droplevels(dd)
+table(dd$teach)
 
-# Overall model: all years against 2004
+# Number of years from 2004
 dd$years.from.2004 <- as.numeric(as.character(dd$year)) - 2004
-m1 <- coxph(Surv(days2mi2, m2) ~ overall + years.from.2004, data = dd)
+# Year as numeric
+dd$yy <- as.numeric(as.character(dd$year))
+# Hospital number as factor
+dd$fhn <- factor(as.character(dd$hn))
+summary(dd)
+
+####################################################################
+# ANOVA
+# 1. Overall MI score improvement
+scores.mi
+scores.mi$overall <- as.numeric(scores.mi$overall)
+scores.mi$years.from.2004 <- as.numeric(as.character(scores.mi$year)) - 2004
+
+boxplot(scores.mi$overall ~ scores.mi$year,
+        main = "Overall MI Scores' Improvement",
+        xlab = "Year",
+        ylab = "Overall Scores")
+
+plot(scores.mi$overall ~ scores.mi$years.from.2004,
+     col = "blue",
+     main = "Overall MI Scores' Improvement",
+     xlab = "Years from 2004",
+     ylab = "Overall Scores")
+m1 <- lm(overall ~ years.from.2004, data = scores.mi)
+abline(m1, col = "red")
+summary(m1)
+legend("bottom",
+       legend = c("Slope estimate: 1.07",
+                  "p-Value: <0.0001"))
+
+summ.mi <- aggregate(scores.mi$overall,
+                     FUN = mean,
+                     by = list(scores.mi$year),
+                     na.rm = TRUE)
+names(summ.mi) <- c("year", "mu")
+summ.mi$sd <- aggregate(scores.mi$overall,
+                     FUN = sd,
+                     by = list(scores.mi$year),
+                     na.rm = TRUE)$x
+summ.mi$n <- aggregate(scores.mi$overall,
+                       FUN = function(a) {sum(!is.na(a))},
+                       by = list(scores.mi$year))$x
+
+summ.mi$lb <- summ.mi$mu - qt(0.975, summ.mi$n - 1)*summ.mi$sd/sqrt(summ.mi$n)
+summ.mi$ub <- summ.mi$mu + qt(0.975, summ.mi$n - 1)*summ.mi$sd/sqrt(summ.mi$n)
+summ.mi
+
+tiff(filename = "tmp/plot1.tiff",
+     width = 5,
+     height = 5,
+     units = "in",
+     res = 400)
+ggplot(summ.mi) +
+  geom_line(aes(x = year,
+                y = mu,
+                colour = "blue")) +
+  geom_point(aes(x = year,
+                 y = mu,
+                 color = "blue"),
+             size = 3) +
+  scale_x_continuous("Year", 
+                     breaks = 2004:2013) +
+  scale_y_continuous("MI Score") +
+  ggtitle("Average Overall MI Scores with 95% C.I. Over Time \n") +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45,
+                                   hjust = 1)) + 
+  geom_errorbar(aes(x = year,
+                    ymin = lb,
+                    ymax = ub),
+                color = "black",
+                width = 0.1)
+graphics.off()
+
+# 2. Overall HF score improvement
+scores.hf
+scores.hf$overall <- as.numeric(scores.hf$overall)
+scores.hf$years.from.2004 <- as.numeric(as.character(scores.hf$year)) - 2004
+
+boxplot(scores.hf$overall ~ scores.hf$year,
+        main = "Overall HF Scores' Improvement",
+        xlab = "Year",
+        ylab = "Overall Scores")
+
+plot(scores.hf$overall ~ scores.hf$years.from.2004,
+     col = "blue",
+     main = "Overall HF Scores' Improvement",
+     xlab = "Years from 2004",
+     ylab = "Overall Scores")
+m1 <- lm(overall ~ years.from.2004, data = scores.hf)
+abline(m1, col = "red")
+summary(m1)
+legend("bottom",
+       legend = c("Slope estimate: 1.84",
+                  "p-Value: <0.0001"))
+
+summ.hf <- aggregate(scores.hf$overall,
+                     FUN = mean,
+                     by = list(scores.hf$year),
+                     na.rm = TRUE)
+names(summ.hf) <- c("year", "mu")
+summ.hf$sd <- aggregate(scores.hf$overall,
+                        FUN = sd,
+                        by = list(scores.hf$year),
+                        na.rm = TRUE)$x
+summ.hf$n <- aggregate(scores.hf$overall,
+                       FUN = function(a) {sum(!is.na(a))},
+                       by = list(scores.hf$year))$x
+
+summ.hf$lb <- summ.hf$mu - qt(0.975, summ.hf$n - 1)*summ.hf$sd/sqrt(summ.hf$n)
+summ.hf$ub <- summ.hf$mu + qt(0.975, summ.hf$n - 1)*summ.hf$sd/sqrt(summ.hf$n)
+summ.hf
+
+ggplot(summ.hf) +
+  geom_line(aes(x = year,
+                y = mu,
+                color = "blue")) +
+  geom_point(aes(x = year,
+                 y = mu,
+                 color = "blue"),
+             size = 3) +
+  ggtitle("Average Overall HF Scores with 95% C.I.") +
+  theme(legend.position = "none") + 
+  geom_errorbar(aes(x = year,
+                    ymin = lb,
+                    ymax = ub),
+                color = "black",
+                width = 0.1)
+
+# 3. Outcomes improvement
+dd$m2.1y <- as.numeric(dd$days2mi2 <= 366 & dd$m2date < maxdat)
+summ.nmi <- aggregate(dd$m2.1y, 
+                     FUN = sum,
+                     by = list(dd$year))
+names(summ.nmi) <- c("year", "nmi")
+summ.nmi$N <- aggregate(dd$m2.1y, 
+                        FUN = length,
+                        by = list(dd$year))$x
+summ.nmi$p <- summ.nmi$nmi/summ.nmi$N
+
+summ.nmi$lb <- summ.nmi$p - qnorm(0.975)*sqrt(summ.nmi$p*(1 - summ.nmi$p)/summ.nmi$N)
+summ.nmi$ub <- summ.nmi$p + qnorm(0.975)*sqrt(summ.nmi$p*(1 - summ.nmi$p)/summ.nmi$N)
+summ.nmi$year <- as.numeric(as.character(summ.nmi$year))
+summ.nmi
+write.csv(summ.nmi, file = "tmp/summ.nmi.csv")
+
+tiff(filename = "tmp/plot2.tiff",
+     width = 5,
+     height = 5,
+     units = "in",
+     res = 400)
+ggplot(summ.nmi) +
+  geom_line(aes(x = year,
+                y = p,
+                color = "blue")) +
+  geom_point(aes(x = year,
+                 y = p,
+                 color = "blue"),
+             size = 3) +
+  ggtitle("Ratios of MI Readmissions Within 1 Year \n to MI Admissions, with 95% C.I.") +
+  scale_x_continuous("Year", 
+                     breaks = 2004:2013) +
+  scale_y_continuous("Ratio") +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45,
+                                   hjust = 1)) +
+  geom_errorbar(aes(x = year,
+                    ymin = lb,
+                    ymax = ub),
+                color = "black",
+                width = 0.1)
+graphics.off()
+
+m1 <- glm(dd$m2.1y ~ dd$years.from.2004, family = "binomial")
+summary(m1)
+
+plot(summ.nmi$N, 
+     col = "red",
+     type = "l", 
+     ylim = c(min(summ.nmi$nmi),
+              max(summ.nmi$N)),
+     log = "y",
+     main = "MI Admissions/Readmissions Over Time",
+     xlab = "Year of MI Admission",
+     ylab = "Number of MI Admissions",
+     xaxt = "n")
+points(summ.nmi$N, 
+       col = "red",
+       pch = 16)
+lines(summ.nmi$nmi,
+      col = "blue")
+points(summ.nmi$nmi,
+       col = "blue", pch = 16)
+legend("right",
+       legend = c("Number of MI Admissions",
+                  "Number of Readmissions Within 1 Year"),
+       pch = 16,
+       lty = 1,
+       col = c("red", "blue"))
+axis(side = 1,
+     at = 1:10,
+     labels = 2004:2013)
+
+####################################################################
+# SURVIVAL
+# 1. Overall score effect, adjusted for year of admission
+m1 <- coxph(Surv(days2mi2, m2) ~ overall + yy, data = dd)
 m1
 s1 <- summary(m1)
+s1
 tt1 <- data.table(Covariate = c("Overall Score",
-                                "Years From 2004"),
+                                "Year of Admission"),
                   s1$conf.int[,c(1, 3, 4)], 
                   pVal = s1$coefficients[, 5])
 tt1
+tt1$signif <- ""
+tt1$signif[tt1$pVal <= 0.05] <- "*"
+tt1$signif[tt1$pVal <= 0.01] <- "**"
 write.csv(tt1, "tmp/tt1.csv")
 
 plot(survfit(m1),
@@ -306,49 +550,49 @@ plot(survfit(m1),
      xlab = "Days from 1st MI",
      ylab = "Propostion Without Events")
 
-#######################
-m2 <- coxph(Surv(days2mi2, m2) ~ overall + year, data = dd)
+# 2. Year effect ONLY (all vs. 2004)
+m2 <- coxph(Surv(days2mi2, m2) ~ year, data = dd)
 m2
 s2 <- summary(m2)
+s2
 tt2 <- data.frame(s2$conf.int[,c(1, 3, 4)], 
                   pVal = s2$coefficients[, 5])
+tt2$signif <- ""
+tt2$signif[tt2$pVal <= 0.05] <- "*"
+tt2$signif[tt2$pVal <= 0.01] <- "**"
 tt2
 write.csv(tt2, "tmp/tt2.csv")
 
-
 m2 <- survfit(Surv(days2mi2, m2) ~ year, data = dd)
+
+tiff(filename = "tmp/plot3.tiff",
+     width = 7,
+     height = 7,
+     units = "in",
+     res = 400)
 plot(m2,
      mark.time = FALSE,
      col = rainbow(nlevels(dd$year)),
      lty = 1,
      lw = 2,
-     main = "MI Readmissons or Deaths After 1st MI \n
-     Adjusted for the Year of 1st MI",
-     xlab = "Days from 1st MI",
-     ylab = "Propostion Without Events")
-legend("bottomleft", 
+     main = "MI Readmissons or Deaths After First MI \n
+     By Year of First MI",
+     xlab = "Days from First MI",
+     ylab = "Proportion of Patients Without MI Readmission or Death")
+legend(x = 2550, y =1, 
        legend = levels(dd$year),
+       title = "Year of 1st MI",
        lty = 1,
        col = rainbow(nlevels(dd$year)),
        ncol = 2)
+graphics.off()
 
 ##############################################################
-# Score range, per hospital
-dd[, score.range := diff(range(overall, na.rm = TRUE)), by = hn]
-
-plot(dd$overall ~ dd$score.range,
-     xlab = "Score Range",
-     ylab = "Overall Score")
-
-# Put NA for hospitals unspecified for teaching
-dd$teach[dd$teach == "NO DATA"] <- NA
-dd <- droplevels(dd)
-table(dd$teach)
-
-# m3 <- coxph(Surv(days2mi2, m2) ~ as.numeric(year) + age + sex + teach + score.range + overall, data = dd)
-m3 <- coxph(Surv(days2mi2, m2) ~ overall + as.numeric(year) + age + sex + teach, data = dd)
+# 3. Adjusted for all
+m3 <- coxph(Surv(days2mi2, m2) ~ overall + yy + age + sex + teach, data = dd)
 m3
 s3 <- summary(m3)
+s3
 tt3 <- data.table(Covariate = c("Overall Score",
                                 "Year of First MI",
                                 "Age at First MI",
@@ -356,15 +600,19 @@ tt3 <- data.table(Covariate = c("Overall Score",
                                 "Teaching Hospital"),
                   s3$conf.int[,c(1, 3, 4)], 
                   pVal = s3$coefficients[, 5])
+tt3$signif <- ""
+tt3$signif[tt3$pVal <= 0.05] <- "*"
+tt3$signif[tt3$pVal <= 0.01] <- "**"
 tt3
 write.csv(tt3, "tmp/tt3.csv")
-tt3$Covariate <- factor(tt3$Covariate, 
-                        levels = c("Overall Score",
-                                   "Year of First MI",
-                                   "Age at First MI",
-                                   "Male",
-                                   "Teaching Hospital"))
 
+tt3$Covariate <- factor(tt3$Covariate, levels = unique(tt3$Covariate))
+
+tiff(filename = "tmp/plot4.tiff",
+     width = 5,
+     height = 5,
+     units = "in",
+     res = 400)
 ggplot(tt3) +
   geom_point(aes(x = Covariate,
                  y = `exp(coef)`,
@@ -372,7 +620,7 @@ ggplot(tt3) +
              size = 3) +
   geom_hline(yintercept = 1,
              linetype = "dashed") +
-  ggtitle(paste("Hazard Ratios of MI Recurrence")) +
+  ggtitle(paste("Hazard Ratios of MI Readmissions or Death \n")) +
   theme(legend.position = "none") + 
   geom_errorbar(aes(x = Covariate,
                     ymin = `lower .95`,
@@ -384,24 +632,21 @@ ggplot(tt3) +
   scale_y_continuous("Hazard Ratio") + 
   theme(axis.text.x = element_text(angle = 30, 
                                    hjust = 1))
+graphics.off()
 
-# ##############################################################
-# # Compare only 2001 and 2003
-# tmp <- droplevels(subset(dd, year %in% c(2005, 2007)))
-# m2 <- coxph(Surv(days2mi2, m2) ~ overall + year, data = tmp)
-# m2
-# summary(m2)
-# 
-# m21 <- survfit(Surv(days2mi2, m2) ~ year, data = tmp)
-# plot(m21, 
-#      mark.time = FALSE,
-#      conf.int = TRUE,
-#      col = c("red", "blue"))
-# 
-# legend("topright", 
-#        legend = levels(tmp$year),
-#        lty = 1,
-#        col = c("red", "blue"))
+# 4. Adjusted for hospitals
+m4 <- coxph(Surv(days2mi2, m2) ~ overall*fhn, data = dd)
+m4
+s4 <- summary(m4)
+s4
+tt4 <- data.frame(s4$conf.int[,c(1, 3, 4)])
+tt4$pVal = s4$coefficients[, 5]
+
+tt4$signif <- ""
+tt4$signif[tt4$pVal <= 0.05] <- "*"
+tt4$signif[tt4$pVal <= 0.01] <- "**"
+tt4
+write.csv(tt4, "tmp/tt4.csv")
 
 ###############################################
 # Loop through years
@@ -412,7 +657,13 @@ for(j in 1:4) {
   for(i in 1:(nlevels(dd$year) - dlta)) {
     tmp <- droplevels(subset(dd, year %in% c(levels(dd$year)[i],
                                              levels(dd$year)[i + dlta])))
-    m1 <- summary(coxph(Surv(days2mi2, m2) ~ year, data = tmp))
+    # m1 <- summary(coxph(Surv(days2mi2, m2) ~ overall + 
+    m1 <- summary(coxph(Surv(days2mi2, m2) ~ overall + 
+                          years.from.2004 +
+                          age + 
+                          sex + 
+                          teach, data = tmp))
+    
     out[[i]] <- c(as.numeric(levels(dd$year)[i + dlta]),
                   m1$conf.int[1, -2], 
                   m1$coef[1, 5])
@@ -430,17 +681,56 @@ for(j in 1:4) {
     geom_hline(yintercept = 1,
                linetype = "dashed") +
     ggtitle(paste("HR of Current and -", j, "Years")) +
-    theme(legend.position = "none") + 
+    scale_y_continuous("Hazard Ratio") +
+    scale_x_continuous("Year", 
+                       breaks = 2004:2013) +
+    theme(legend.position = "none",
+          axis.text.x = element_text(angle = 45,
+                                     hjust = 1)) +
     geom_errorbar(aes(x = Year,
                       ymin = LL95,
                       ymax = UL95),
                   colour = "black",
                   width = .1)
 }
+
+tiff(filename = "tmp/plot5.tiff",
+     width = 6,
+     height = 6,
+     units = "in",
+     res = 400)
 grid.arrange(pp[[1]],
              pp[[2]],
              pp[[3]],
              pp[[4]])
+graphics.off()
+
+###########################################################
+# FOR POSTER
+m1 <- coxph(Surv(days2mi2, m2) ~ dscore, data = dd)
+m1
+s1 <- summary(m1)
+s1
+
+m1 <- coxph(Surv(days2mi2, m2) ~ dscore + yy, data = dd)
+m1
+s1 <- summary(m1)
+s1
+
+m1 <- coxph(Surv(days2mi2, m2) ~ dscore + yy + age + sex + teach, data = dd)
+m1
+s1 <- summary(m1)
+s1
+
+
+
+
+
+
+
+
+
+
 
 scores[, mu := mean(overall, na.rm = TRUE),
        by = year]
@@ -738,3 +1028,84 @@ p2
 # 2nd y-axis if possible
 # x and y axis labels
 # multiple panels with free scale
+
+
+
+
+####################################################################
+# Logistic regression
+# 'n' year incidence
+n = 1
+dd$m2.n.y <- ((dd$days2mi2 < (n*365.25 + 1)) & (dd$m2date != "2015-01-01"))
+table(dd$m2.n.y)
+
+m1 <- glm(m2.n.y ~ overall + years.from.2004,
+          family = "binomial",
+          data = droplevels(subset(dd, yy < 2013 - n)))
+summary(m1)
+
+m1 <- glm(m2.n.y ~ overall + yy + age + sex + teach,
+          family = "binomial",
+          data = droplevels(subset(dd, yy < 2013 - n)))
+summary(m1)
+
+m1 <- glm(m2.n.y ~ overall*fhn + years.from.2004 + age + sex + teach,
+          family = "binomial",
+          data = droplevels(subset(dd, yy < 2013 - n)))
+summary(m1)
+
+####################################################################
+# FINAL MODELS FOR POSTER!
+# Logistic regression
+# 'n' year incidence
+n = 1
+dd$m2.n.y <- ((dd$days2mi2 < (n*365.25 + 1)) & (dd$m2date != "2015-01-01"))
+table(dd$m2.n.y)
+
+m1 <- glm(m2.n.y ~ dscore,
+          family = "binomial",
+          data = droplevels(subset(dd, (dd$yy < 2013 - n) & 
+                                     teach == 0 &
+                                     dscore < 30)))
+summary(m1)
+plot(predict(m1,
+             type = "response") ~ m1$data$dscore,
+     type = "b", 
+     pch = 16,
+     xlab = "Delta Scores",
+     ylab = "Predicted Probabilities of MI Readmission",
+     main = "MI Readmission Within 1 Year",
+     col = "red",
+     ylim = c(0, 1))
+
+m1 <- glm(m2.n.y ~ dscore,
+          family = "binomial",
+          data = droplevels(subset(dd, (dd$yy < 2013 - n) & 
+                                     teach == 1 & 
+                                     dscore < 30)))
+summary(m1)
+lines(predict(m1,
+              type = "response") ~ m1$data$dscore,
+      col = "green")
+points(predict(m1,
+               type = "response") ~ m1$data$dscore,
+       col = "green",
+       pch = 16)
+
+m1 <- glm(m2.n.y ~ dscore*fhn + yy,
+          family = "binomial",
+          data = droplevels(subset(dd, yy < 2013 - n)))
+summary(m1)
+
+####################################################################
+# Aside
+unique(dd$year)
+
+dd1 <- droplevels(subset(dd, hn %in% c(110, 112, 12, 15, 16)))
+
+ggplot(dd1, 
+       aes(x = year,
+           y = overall,
+           group = fhn,
+           colour = fhn)) +
+  geom_line()
