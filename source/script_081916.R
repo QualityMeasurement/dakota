@@ -1,3 +1,7 @@
+# Project: Hospital Quality of Care Scores Association with Clinical Outcomes in MIDAS   
+# Author: Davit Sargsyan
+# Created: 08/19/2016
+#*********************************************
 require(data.table)
 require(survival)
 require(ggplot2)
@@ -5,6 +9,7 @@ require(ggplot2)
 # require(grid)
 require(gridExtra)
 
+# Load data----
 # Scores
 scores.mi <- fread("data\\NJ HOSPITALS_Heart Attack Scores.csv")
 scores.hf <- fread("data\\NJ HOSPITALS_Heart Failure Scores.csv")
@@ -13,14 +18,55 @@ scores.mi <- droplevels(subset(scores.mi,
                                subset = !is.na(scores.mi$`Report Year`) &
                                  scores.mi$`Hospital Number` != 999 &
                                  scores.mi$Secondary == 0, 
-                               select = c(1:3, 8, 13:14)))
+                               select = c(1:3, 8, 13:21)))
 
 scores.hf <- droplevels(subset(scores.hf, 
                                subset = !is.na(scores.hf$`Report Year`) &
                                  scores.hf$`Hospital Number` != 999 &
                                  scores.hf$Secondary == 0, 
-                               select = c(1:3, 8, 13:14)))
+                               select = c(1:3, 8, 13:21)))
 
+# Convert variables
+scores.mi$`Report Year` <- factor(scores.mi$`Report Year`)
+scores.mi$`Hospital Number` <- factor(scores.mi$`Hospital Number`)
+scores.mi$Teach <- factor(scores.mi$Teach)
+scores.mi$BEDS <- as.numeric(as.character(scores.mi$BEDS))
+
+scores.mi$`Overall Score (%)` <- as.numeric(as.character(scores.mi$`Overall Score (%)`))
+scores.mi$`Aspirin Arrival (%)` <- as.numeric(as.character(scores.mi$`Aspirin Arrival (%)`))
+scores.mi$`Asprin Discharge (%)` <- as.numeric(as.character(scores.mi$`Asprin Discharge (%)`))
+scores.mi$`Beta Blocker Arrival (%)` <- as.numeric(as.character(scores.mi$`Beta Blocker Arrival (%)`))
+scores.mi$`Beta Blocker Discharge (%)` <- as.numeric(as.character(scores.mi$`Beta Blocker Discharge (%)`))
+scores.mi$`ACEI/ARB Discharge (%)` <- as.numeric(as.character(scores.mi$`ACEI/ARB Discharge (%)`))
+scores.mi$`Smoking Cessation Advice (%)` <- as.numeric(as.character(scores.mi$`Smoking Cessation Advice (%)`))
+scores.mi$`Statin Prescribed at Discharge (%)` <- as.numeric(as.character(scores.mi$`Statin Prescribed at Discharge (%)`))
+
+summary(scores.mi)
+
+scores.mi[, nOveral := sum(!is.na(`Overall Score (%)`)),
+          by = `Report Year`]
+scores.mi[, nAspArrl := sum(!is.na(`Aspirin Arrival (%)`)),
+          by = `Report Year`]
+scores.mi[, nAspDsch := sum(!is.na(`Asprin Discharge (%)`)),
+          by = `Report Year`]
+scores.mi[, nBBArrl := sum(!is.na(`Beta Blocker Arrival (%)`)),
+          by = `Report Year`]
+scores.mi[, nBBDsch := sum(!is.na(`Beta Blocker Discharge (%)`)),
+          by = `Report Year`]
+scores.mi[, nACEI := sum(!is.na(`ACEI/ARB Discharge (%)`)),
+          by = `Report Year`]
+scores.mi[, nSmoke := sum(!is.na(`Smoking Cessation Advice (%)`)),
+          by = `Report Year`]
+scores.mi[, nStatin := sum(!is.na(`Statin Prescribed at Discharge (%)`)),
+          by = `Report Year`]
+
+t1 <- unique(subset(scores.mi,
+                    select = c(1, 14:21)))
+t1
+
+CONTINUE HERE! 01/06/2016
+  
+# Count number of hospitals that collected the scores 
 names(scores.mi) <- names(scores.hf) <- c("year", 
                                           "hosp", 
                                           "hn",
