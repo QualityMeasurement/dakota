@@ -1,5 +1,5 @@
 ##  Project: Hospital Quality of Care Scores Association with Clinical Outcomes in MIDAS       
-### Author: Georgia Barbayannis, Davit Sargsyan   
+### Author: Georgia Barbayannis; Davit Sargsyan   
 ### Created: 09/09/2016   
 
 ---
@@ -34,8 +34,6 @@ Clinical outcomes: MI readmissions or deaths, death alone (CV and all-cause), MI
 
 5. Association of delta scores and patient outcomes, same analysis as (3) and (4) above.
 
-
- 
 ### Summary: 
 
 Did trend of MI change after implementation of guidelines? There were different trends in both scores and outcomes, so how do they relate to each other? Since both change over time and change in different directions, if put them together shows there’s a huge effect so want to adjust to see if this was due to something else. Finally, adjust to see if there are only 1 or 2 hospitals that drive entire analysis and conclusion.

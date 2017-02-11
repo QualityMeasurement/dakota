@@ -5,8 +5,6 @@
 require(data.table)
 require(survival)
 require(ggplot2)
-# require(gtable)
-# require(grid)
 require(gridExtra)
 
 # Load data----
