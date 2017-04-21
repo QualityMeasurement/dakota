@@ -6,7 +6,7 @@ DATA_HOME <- "C:/Users/ds752/Documents/git_local/data/dakota"
 
 require(data.table)
 require(survival)
-require(ggplot2)
+
 require(gridExtra)
 
 # Load data----
@@ -35,8 +35,8 @@ scores.mi$BEDS <- as.numeric(as.character(scores.mi$BEDS))
 scores.mi$`Overall Score (%)` <- as.numeric(as.character(scores.mi$`Overall Score (%)`))
 scores.mi$`Aspirin Arrival (%)` <- as.numeric(as.character(scores.mi$`Aspirin Arrival (%)`))
 scores.mi$`Asprin Discharge (%)` <- as.numeric(as.character(scores.mi$`Asprin Discharge (%)`))
-scores.mi$`Beta Blocker Arrival (%)` <- as.numeric(as.character(scores.mi$`Beta Blocker Arrival (%)`))
-scores.mi$`Beta Blocker Discharge (%)` <- as.numeric(as.character(scores.mi$`Beta Blocker Discharge (%)`))
+
+scores.mi$`Beta Blocker Discharge (%)` <- as.numeric(as.character(scores.mi$`Beta Blocker Discharge (%)`))scores.mi$`Beta Blocker Arrival (%)` <- as.numeric(as.character(scores.mi$`Beta Blocker Arrival (%)`))
 scores.mi$`ACEI/ARB Discharge (%)` <- as.numeric(as.character(scores.mi$`ACEI/ARB Discharge (%)`))
 scores.mi$`Smoking Cessation Advice (%)` <- as.numeric(as.character(scores.mi$`Smoking Cessation Advice (%)`))
 scores.mi$`Statin Prescribed at Discharge (%)` <- as.numeric(as.character(scores.mi$`Statin Prescribed at Discharge (%)`))
@@ -136,10 +136,7 @@ uhs
 # Contains records from March 1985 to the end of
 # md <- fread("data/miqcdatafullcomorb.csv")
 # save(md, file = "C:/Users/ds752/Documents/git_local/data/dakota/md.R")
-# Load MIDAS----
 load("C:/Users/ds752/Documents/git_local/data/dakota/md.R")
-write.csv(data.table(names = names(md)),
-          file = "tmp/names_md.csv")
 
 # Format data
 md$FIRSTMIDATE <- as.Date(md$FIRSTMIDATE, "%m/%d/%Y")

@@ -3,6 +3,17 @@
 ### Created: 09/09/2016   
 
 ---
+
+### 04/21/2017
+
+* Added 'midas15_dakota_data.R' source file. Based on Jen Wellings' 'HF after AMI' data subsetting.
+* Insurance is now combined into just 3 categories (see the code for details). NOTE: update all current projects accordingly.
+
+### 03/25/2017   
+
+* Per Javier's advice, moved all data files outside project folders for faster load of the projects. 
+* All data files are now located in 'DATA_HOME = C:/Users/ds752/Documents/git_local/data'
+
 ### Notes from 01/06/2017:
 
 1. Analyze each subscore separately.
