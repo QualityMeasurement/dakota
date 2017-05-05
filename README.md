@@ -3,6 +3,9 @@
 ### Created: 09/09/2016   
 
 ---
+### 05/05/2017
+* Finihsed data preprocessing, MIDAS15
+* Added analysis example file in 'source'
 
 ### 04/21/2017
 
