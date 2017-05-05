@@ -109,11 +109,11 @@ midas15$PRIME[(midas15$PRIME %in% c("BLUE CROSS PLANS",
                                      "HMO"))] <- "COMMERCIAL"
 
 midas15$PRIME[!(midas15$PRIME %in% c("medicare",
-                                     "COMMERCIAL"))] <- "medicaid/self-pay"
+                                     "COMMERCIAL"))] <- "medicaid/self-pay/other"
 midas15$PRIME <- factor(midas15$PRIME,
                         levels = c("medicare",
                                    "COMMERCIAL",
-                                   "medicaid/self-pay"))
+                                   "medicaid/self-pay/other"))
 100*table(midas15$PRIME)/nrow(midas15)
 gc()
 
@@ -152,7 +152,7 @@ dx.1.3[, cnames[-1] := lapply(dx.1.3[, cnames[-1], with = FALSE],
 gc()
 
 save(midas15, dx, dx.1.3,  
-     file = file.path(DATA_HOME, "midas15_dakota_04212017.RData"), 
+     file = file.path(DATA_HOME, "midas15_dakota_05052017.RData"), 
      compress = FALSE)
 
 #**********************************************************
@@ -160,7 +160,7 @@ save(midas15, dx, dx.1.3,
 DATA_HOME <- "C:/Users/ds752/Documents/git_local/data/dakota"
 require(data.table)
 
-load(file.path(DATA_HOME, "midas15_dakota_04212017.RData"))
+load(file.path(DATA_HOME, "midas15_dakota_05052017.RData"))
 range(midas15$ADMDAT)
 range(midas15$DSCHDAT)
 
@@ -168,7 +168,7 @@ range(midas15$DSCHDAT)
 # Restrict total bill to $10^2 - $10^6 interval
 hist(log10(midas15$TOTBIL), 100)
 
-tmp <- droplevels(subset(midas15, TOTBIL >= 10^2 & TOTBIL <= 10^5))
+tmp <- droplevels(subset(midas15, TOTBIL >= 10^2 & TOTBIL <= 10^6))
 boxplot(log10(tmp$TOTBIL) ~ tmp$SEX)
 rm(tmp)
 gc()
@@ -442,7 +442,7 @@ rm(dx,
 gc()
 
 #**********************************************************
-# First MI discharge (DX1) between 01/01/2000 and 12/31/2011
+# First MI discharge (DX1) between 01/01/2000 and 12/31/2015
 setkey(dt1, DSCHDAT, Patient_ID)
 
 dt1[, first := min(DSCHDAT[ami.dx1 &
@@ -465,16 +465,16 @@ sum(dt1$current)
 dt1 <- droplevels(dt1)
 summary(dt1)
 save(dt1, 
-     file = file.path(DATA_HOME, "dt1_04152017.RData"),
+     file = file.path(DATA_HOME, "dt1_05052017.RData"),
      compress = FALSE)
 
 #**********************************************************
-# PART II----
+# PART III----
 DATA_HOME <- "C:/Users/ds752/Documents/git_local/data/midas.pci"
 require(data.table)
 require(ggplot2)
 
-load(file.path(DATA_HOME, "dt1_04152017.RData"))
+load(file.path(DATA_HOME, "dt1_05052017.RData"))
 
 # Outcomes and histories (prior to 1st PCI)----
 system.time(
@@ -482,9 +482,13 @@ system.time(
                    DSCHDAT,
                    patbdte,
                    NEWDTD,
+                   CAUSE,
                    HOSP,
+                   DIV,
+                   ZIP,
                    SEX,
                    PRIME,
+                   TOTBIL,
                    RACE,
                    HISPAN,
                    AGE,
@@ -494,104 +498,7 @@ system.time(
                    current,
                    ami.dx1,
                    ami,
-                   readm.30 = sum(!(prior | current) &
-                                    (difftime(ADMDAT,
-                                              first,
-                                              units = "days") >= 0) &
-                                    (difftime(ADMDAT,
-                                              first,
-                                              units = "days") < 31) &
-                                    (is.na(NEWDTD) | (difftime(NEWDTD,
-                                                               ADMDAT,
-                                                               units = "days")) >= 0)) > 0,
-                   post.chf.acute.30 = sum(chf.acute & 
-                                             !(prior | current) &
-                                             (difftime(ADMDAT,
-                                                       first,
-                                                       units = "days") >= 0) &
-                                             (difftime(ADMDAT,
-                                                       first,
-                                                       units = "days") < 31) &
-                                             (is.na(NEWDTD) | (difftime(NEWDTD,
-                                                                        ADMDAT,
-                                                                        units = "days")) >= 0)) > 0,
-                   dead.30 = sum(!(prior | current) &
-                                   (difftime(NEWDTD,
-                                             first,
-                                             units = "days") > 0) &
-                                   (difftime(NEWDTD,
-                                             first,
-                                             units = "days") < 31),
-                                 na.rm = TRUE) > 0,
-                   readm.90 = sum(!(prior | current) &
-                                    (difftime(ADMDAT,
-                                              first,
-                                              units = "days") >= 0) &
-                                    (difftime(ADMDAT,
-                                              first,
-                                              units = "days") < 91) &
-                                    (is.na(NEWDTD) | (difftime(NEWDTD,
-                                                               ADMDAT,
-                                                               units = "days")) >= 0)) > 0,
-                   post.chf.acute.90 = sum(chf.acute & 
-                                             !(prior | current) &
-                                             (difftime(ADMDAT,
-                                                       first,
-                                                       units = "days") >= 0) &
-                                             (difftime(ADMDAT,
-                                                       first,
-                                                       units = "days") < 91) &
-                                             (is.na(NEWDTD) | (difftime(NEWDTD,
-                                                                        ADMDAT,
-                                                                        units = "days")) >= 0)) > 0,
-                   dead.90 = sum(!(prior | current) &
-                                   (difftime(NEWDTD,
-                                             first,
-                                             units = "days") > 0) &
-                                   (difftime(NEWDTD,
-                                             first,
-                                             units = "days") < 91),
-                                 na.rm = TRUE) > 0,
-                   readm.180 = sum(!(prior | current) &
-                                    (difftime(ADMDAT,
-                                              first,
-                                              units = "days") >= 0) &
-                                    (difftime(ADMDAT,
-                                              first,
-                                              units = "days") < 181) &
-                                    (is.na(NEWDTD) | (difftime(NEWDTD,
-                                                               ADMDAT,
-                                                               units = "days")) >= 0)) > 0,
-                   post.chf.acute.180 = sum(chf.acute & 
-                                             !(prior | current) &
-                                             (difftime(ADMDAT,
-                                                       first,
-                                                       units = "days") >= 0) &
-                                             (difftime(ADMDAT,
-                                                       first,
-                                                       units = "days") < 181) &
-                                             (is.na(NEWDTD) | (difftime(NEWDTD,
-                                                                        ADMDAT,
-                                                                        units = "days")) >= 0)) > 0,
-                   dead.180 = sum(!(prior | current) &
-                                   (difftime(NEWDTD,
-                                             first,
-                                             units = "days") > 0) &
-                                   (difftime(NEWDTD,
-                                             first,
-                                             units = "days") < 181),
-                                 na.rm = TRUE) > 0,
-                   readm.1y = sum(!(prior | current) &
-                                    (difftime(ADMDAT,
-                                              first,
-                                              units = "days") >= 0) &
-                                    (difftime(ADMDAT,
-                                              first,
-                                              units = "days") < 366) &
-                                    (is.na(NEWDTD) | (difftime(NEWDTD,
-                                                               ADMDAT,
-                                                               units = "days")) >= 0)) > 0,
-                   post.chf.acute.1y = sum(chf.acute & 
+                   post.ami.dx1.1y = sum(ami.dx1 & 
                                              !(prior | current) &
                                              (difftime(ADMDAT,
                                                        first,
@@ -610,22 +517,20 @@ system.time(
                                              first,
                                              units = "days") < 366),
                                  na.rm = TRUE) > 0,
-                   hami.dx1 = (sum(ami.dx1 & prior) > 0),
                    hami = (sum(ami & prior) > 0),
-                   
-                   hchf.acute = (sum(chf.acute & prior) > 0),
-                   hchf.chron = (sum(chf.chron & prior) > 0), 
-                   hhyp.401 = (sum(hyp.401 & prior) > 0),
-                   hhyp.402 = (sum(hyp.402 & prior) > 0), 
-                   hhyp.403 = (sum(hyp.403 & prior) > 0),
-                   hhyp.404 = (sum(hyp.404 & prior) > 0), 
-                   hhyp.405 = (sum(hyp.405 & prior) > 0),
-                   hhyp = (sum(hyp & prior) > 0), 
-                   hdiab = (sum(diab & prior) > 0), 
-                   hcld = (sum(cld & prior) > 0),
-                   hckd = (sum(ckd & prior) > 0),
-                   hcopd = (sum(copd & prior) > 0),
-                   hlipid = (sum(lipid & prior) > 0)), 
+                   hchf.acute = (sum(chf.acute & (prior | current)) > 0),
+                   hchf.chron = (sum(chf.chron & (prior | current)) > 0), 
+                   hhyp.401 = (sum(hyp.401 & (prior | current)) > 0),
+                   hhyp.402 = (sum(hyp.402 & (prior | current)) > 0), 
+                   hhyp.403 = (sum(hyp.403 & (prior | current)) > 0),
+                   hhyp.404 = (sum(hyp.404 & (prior | current)) > 0), 
+                   hhyp.405 = (sum(hyp.405 & (prior | current)) > 0),
+                   hhyp = (sum(hyp & (prior | current)) > 0), 
+                   hdiab = (sum(diab & (prior | current)) > 0), 
+                   hcld = (sum(cld & (prior | current)) > 0),
+                   hckd = (sum(ckd & (prior | current)) > 0),
+                   hcopd = (sum(copd & (prior | current)) > 0),
+                   hlipid = (sum(lipid & (prior | current)) > 0)), 
             by = Patient_ID]
 )
 summary(hh)
@@ -637,7 +542,7 @@ case <- unique(subset(hh, current & ami.dx1))
 
 # If the are are more than 1 records of 1st MI admissions per person,
 nrow(case) - length(unique(case$Patient_ID))
-# Remove 546 patient with duplicate records
+# Remove 815patient with duplicate records
 case <- case[!(Patient_ID %in% Patient_ID[duplicated(Patient_ID)]), ]
 summary(case)
 
@@ -646,7 +551,6 @@ case <- droplevels(subset(case, (is.na(NEWDTD) | NEWDTD != first)))
 
 # Remove anyone with history of MI
 case <- droplevels(subset(case, !hami))
-case[, hami.dx1 := NULL]
 case[, hami := NULL]
 
 # MI discharges
@@ -659,5 +563,8 @@ plot(t1[, 1] ~ as.numeric(rownames(t1)),
      ylab = "Number of MI Discharges (DX1 Only)")
 
 save(case, 
-     file = file.path(DATA_HOME, "case_04152017.RData"),
+     file = file.path(DATA_HOME, "case_05052017.RData"),
      compress = FALSE)
+write.csv(case,
+          file = file.path(DATA_HOME, "case_05052017.csv"),
+          row.names = FALSE)
