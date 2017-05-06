@@ -3,6 +3,10 @@
 ### Created: 09/09/2016   
 
 ---
+### 06/05/2017
+* Separated acute CHF records prior to 1st AMI from records at 1st AMI admissions
+* Added chronic CHF
+
 ### 05/05/2017
 * Finihsed data preprocessing, MIDAS15
 * Added analysis example file in 'source'

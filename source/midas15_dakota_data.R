@@ -276,14 +276,29 @@ gc()
 #                                                         rowSums(dx.1.4 == "4109", na.rm = TRUE))) > 0))]
 # addmargins(table(dt1$ami.other))
 
-CONTINUE HERE! (DS 04/21/2017)
-
 ########################################
 # Risk factors----
 # See "C:\Users\ds752\Documents\svn_local\trunk\Cardiovascular\MCHADS\source\final\MIDAS ICD-9 Code Counts.pptx" for details
+# 1. Unused CHF codes----
+# 428 Heart failure
+## 428.1 Left heart failure
+## 428.2 Systolic heart failure
+## 428.3 Diastolic heart failure
+## 428.4 Combined systolic and diastolic heart failure
+## 428.9 Heart failure, unspecified
+
 # 1a. Acute CFH----
+## 428.0 Congestive heart failure, unspecified
+### 428.20 Systolic heart failure, unspecified
+### 428.21 Acute systolic heart failure
+### 428.23 Acute on chronic systolic heart failure
+### 428.30 Diastolic heart failure, unspecified
+### 428.31 Acute diastolic heart failure
+### 428.33 Acute on chronic diastolic heart failure
+### 428.40 Combined systolic and diastolic heart failure, unspecified
+### 428.41 Acute combined systolic and diastolic heart failure
+### 428.43 Acute on chronic combined systolic and diastolic heart failure
 dt1[, chf.acute := (rowSums(data.table(rowSums(dx == "4280", na.rm = TRUE),
-                                       rowSums(dx == "4281", na.rm = TRUE),
                                        rowSums(dx == "42820", na.rm = TRUE),
                                        rowSums(dx == "42821", na.rm = TRUE),
                                        rowSums(dx == "42823", na.rm = TRUE),
@@ -292,14 +307,32 @@ dt1[, chf.acute := (rowSums(data.table(rowSums(dx == "4280", na.rm = TRUE),
                                        rowSums(dx == "42833", na.rm = TRUE),
                                        rowSums(dx == "42840", na.rm = TRUE),
                                        rowSums(dx == "42841", na.rm = TRUE),
-                                       rowSums(dx == "42842", na.rm = TRUE),
                                        rowSums(dx == "42843", na.rm = TRUE))) > 0)]
 table(dt1$chf.acute)
 gc()
 
-# 1b. Chronic CFH
+# 1b. Acute CFH in DX1----
+dt1[, chf.acute.dx1 := (dx$DX1 %in% c("4280",
+                                      "42820",
+                                      "42821",
+                                      "42823",
+                                      "42830",
+                                      "42831",
+                                      "42833",
+                                      "42840",
+                                      "42841",
+                                      "42843"))]
+table(chf.acute = dt1$chf.acute,
+      chf.acute.dx1 = dt1$chf.acute.dx1)
+gc()
+
+# 1c. Chronic CFH----
+### 428.22 Chronic systolic heart failure
+### 428.32 Chronic diastolic heart failure
+### 428.42 Chronic combined systolic and diastolic heart failure
 dt1[, chf.chron := (rowSums(data.table(rowSums(dx == "42822", na.rm = TRUE),
-                                       rowSums(dx == "42832", na.rm = TRUE))) > 0)]
+                                       rowSums(dx == "42832", na.rm = TRUE),
+                                       rowSums(dx == "42842", na.rm = TRUE))) > 0)]
 table(dt1$chf.chron)
 gc()
 
@@ -518,7 +551,8 @@ system.time(
                                              units = "days") < 366),
                                  na.rm = TRUE) > 0,
                    hami = (sum(ami & prior) > 0),
-                   hchf.acute = (sum(chf.acute & (prior | current)) > 0),
+                   hchf.acute = (sum(chf.acute & prior) > 0),
+                   chf.acute.current = (sum(chf.acute & current) > 0),
                    hchf.chron = (sum(chf.chron & (prior | current)) > 0), 
                    hhyp.401 = (sum(hyp.401 & (prior | current)) > 0),
                    hhyp.402 = (sum(hyp.402 & (prior | current)) > 0), 
