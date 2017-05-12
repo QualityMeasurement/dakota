@@ -1,5 +1,5 @@
-# Project: Heart Failures after MIs in MIDAS       
-# Author: georgia Barbayannis; Davit Sargsyan   
+# Project: Dakota       
+# Author: Georgia Barbayannis; Davit Sargsyan; I-ming Chiu; Noah Michel  
 # Created:  04/21/2017
 #**********************************************************
 # PART I----
@@ -451,7 +451,7 @@ dt1[, copd := (rowSums(data.table(rowSums(dx.1.3 == "490", na.rm = TRUE),
 table(dt1$copd)
 gc()
 
-# 7. Disorders of lipoid metabolism----
+# 7. Disorders of lipoid metabolism disorder----
 # 272 Disorders of lipoid metabolism
 ## 272.0 Pure hypercholesterolemia
 ## 272.1 Pure hyperglyceridemia
