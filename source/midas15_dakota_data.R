@@ -503,7 +503,7 @@ save(dt1,
 
 #**********************************************************
 # PART III----
-DATA_HOME <- "C:/Users/ds752/Documents/git_local/data/midas.pci"
+DATA_HOME <- "C:/Users/ds752/Documents/git_local/data/dakota"
 require(data.table)
 require(ggplot2)
 
@@ -531,17 +531,34 @@ system.time(
                    current,
                    ami.dx1,
                    ami,
+                   post.ami = sum(ami.dx1 & 
+                                    !(prior | current) &
+                                    (difftime(ADMDAT,
+                                              first,
+                                              units = "days") > 0) &
+                                    (is.na(NEWDTD) | (difftime(NEWDTD,
+                                                               ADMDAT,
+                                                               units = "days")) > 0)) > 0,
+                   post.ami.dat = min(ADMDAT[ami.dx1 & 
+                                               !(prior | current) &
+                                               (difftime(ADMDAT,
+                                                         first,
+                                                         units = "days") > 0) &
+                                               (is.na(NEWDTD) | (difftime(NEWDTD,
+                                                                          ADMDAT,
+                                                                          units = "days")) > 0)],
+                                      na.rm = TRUE),
                    post.ami.dx1.1y = sum(ami.dx1 & 
                                              !(prior | current) &
                                              (difftime(ADMDAT,
                                                        first,
-                                                       units = "days") >= 0) &
+                                                       units = "days") > 0) &
                                              (difftime(ADMDAT,
                                                        first,
                                                        units = "days") < 366) &
                                              (is.na(NEWDTD) | (difftime(NEWDTD,
                                                                         ADMDAT,
-                                                                        units = "days")) >= 0)) > 0,
+                                                                        units = "days")) > 0)) > 0,
                    dead.1y = sum(!(prior | current) &
                                    (difftime(NEWDTD,
                                              first,
@@ -574,6 +591,10 @@ gc()
 # Remove all cases with no MI records
 case <- unique(subset(hh, current & ami.dx1))
 
+# CHECKPOINT: did we find all readmission dates?
+sum(is.finite(case$post.ami.dat))
+sum(case$post.ami)
+
 # If the are are more than 1 records of 1st MI admissions per person,
 nrow(case) - length(unique(case$Patient_ID))
 # Remove 815patient with duplicate records
@@ -597,8 +618,8 @@ plot(t1[, 1] ~ as.numeric(rownames(t1)),
      ylab = "Number of MI Discharges (DX1 Only)")
 
 save(case, 
-     file = file.path(DATA_HOME, "case_05052017.RData"),
+     file = file.path(DATA_HOME, "case_05122017.RData"),
      compress = FALSE)
 write.csv(case,
-          file = file.path(DATA_HOME, "case_05052017.csv"),
+          file = file.path(DATA_HOME, "case_05122017.csv"),
           row.names = FALSE)

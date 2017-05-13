@@ -2,14 +2,14 @@
 # Author: Georgia Barbayannis; Davit Sargsyan; I-ming Chiu; Noah Michel
 # Created:  05/12/2017
 #**********************************************************
-# PART I----
+# PART I: Data----
 DATA_HOME <- "C:/Users/ds752/Documents/git_local/data/dakota"
 require(data.table)
 require(survival)
 require(ggplot2)
 
 # Load data----
-load(file.path(DATA_HOME, "case_05052017.RData"))
+load(file.path(DATA_HOME, "case_05122017.RData"))
 
 length(unique(as.numeric(case$ZIP)))
 summary(as.numeric(case$ZIP))
@@ -101,15 +101,31 @@ dt1$dead[!is.na(dt1$NEWDTD)] <- TRUE
 addmargins(table(dt1$dead))
 
 # Censor the data
+# a. If patients did not die until 01/01/2016, censor
 dt1$NEWDTD[!dt1$dead] <- as.Date("2016-01-01")
+
+# b. If patients did not have MI readmission, override the NA 
+#    with date of death (real or censored from Part a above)
+dt1$post.ami.dat[!is.finite(dt1$post.ami.dat)] <- dt1$NEWDTD[!is.finite(dt1$post.ami.dat)]
+summary(dt1$post.ami.dat)
 
 # Days to death
 dt1$days2death <- as.numeric(as.character(difftime(dt1$NEWDTD,
                                                    dt1$DSCHDAT,
                                                    units = "days")))
 hist(dt1$days2death, 100)
+summary(dt1$days2death)
 
-# Model1: survival----
+# Days to MI readmisson
+dt1$days2mi2 <- as.numeric(as.character(difftime(dt1$post.ami.dat,
+                                                   dt1$DSCHDAT,
+                                                   units = "days")))
+hist(dt1$days2mi2, 100)
+summary(dt1$days2mi2)
+
+#**********************************************************
+# PART II: Models----
+# Model1: Cox Regression----
 # Subset data to just 2 years----
 dt1.00.01 <- droplevels(subset(dt1,
                                dschyear %in% c(2000, 2001)))
@@ -173,7 +189,7 @@ ggplot(dt.surv,
                              title.position = "top",
                              nrow = 1))
 
-# Model2: logistic
+# Model2: logistic----
 # a. MI eadmission within 1 year of first MI
 m2 <- glm(post.ami.dx1.1y ~ SEX,
              family = binomial(logit),
