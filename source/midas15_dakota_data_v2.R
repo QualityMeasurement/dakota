@@ -1,23 +1,33 @@
-# Project: Dakota       
-# Author: Georgia Barbayannis; Davit Sargsyan; I-ming Chiu; Noah Michel  
-# Created:  04/21/2017
-#**********************************************************
-# PART I----
-DATA_HOME <- "C:/Users/ds752/Documents/git_local/data/dakota"
+# |------------------------------------------------------------------------|
+# | Project1: Hospital Quality of Care Scores Association                  |
+# |           with Clinical Outcomes in MIDAS                              |
+# | Project2: Income Association with Clinical Outcomes in MIDAs           |
+# | Script: Make the data set for the analysis                             |
+# | Authors: Georgia Barbayannis, I-ming Chiu, Noah Michel, Davit Sargsyan |   
+# | Created: 04/21/2017                                                    |
+# | Modified: 07/22/2017                                                   |
+# |------------------------------------------------------------------------|
+# Header----
+# Move up one directory
+wd <- getwd()
+setwd("..")
+DATA_HOME <- paste(getwd(),
+                   "data/dakota",
+                   sep = "/")
+# Reset working directory
+setwd(wd)
+getwd()
+
 require(data.table)
+require(ggplot2)
 
 # Load MIDAS----
+# The dataset was created using 
+# '.../midas/source/export_midas_from_csv_to_rdata.R' script
 system.time(load("C:/MIDAS/midas15.RData"))
 midas15
 
 # Remove unused variables----
-midas15[, LOCATION := NULL]
-midas15[, DeathRNUM := NULL]
-midas15[, STATUS := NULL]
-midas15[, SOURCE := NULL]
-midas15[, DRG := NULL]
-midas15[, RECDID := NULL]
-midas15[, DSHYR := NULL]
 midas15[, PROC1 := NULL]
 midas15[, PROC2 := NULL]
 midas15[, PROC3 := NULL]
@@ -26,118 +36,41 @@ midas15[, PROC5 := NULL]
 midas15[, PROC6 := NULL]
 midas15[, PROC7 := NULL]
 midas15[, PROC8 := NULL]
-midas15[, PRDTE1 := NULL]
-midas15[, PRDTE2 := NULL]
-midas15[, PRDTE3 := NULL]
-midas15[, PRDTE4 := NULL]
-midas15[, PRDTE5 := NULL]
-midas15[, PRDTE6 := NULL]
-midas15[, PRDTE7 := NULL]
-midas15[, PRDTE8 := NULL]
-midas15[, SECOND := NULL]
-midas15[, THIRD := NULL]
 gc()
 
 # Number of patients
 length(unique(midas15$Patient_ID))
-# 4,842,160
+# 4,680,205
 
-# Convert dates----
-midas15[, NEWDTD := as.Date(NEWDTD, format = "%m/%d/%Y")]
-midas15[, ADMDAT := as.Date(ADMDAT, format = "%m/%d/%Y")]
-midas15[, DSCHDAT := as.Date(DSCHDAT, format = "%m/%d/%Y")]
-midas15[, patbdte := as.Date(patbdte, format = "%m/%d/%Y")]
-
-# Missing birthdays
-midas15[is.na(midas15$patbdte)]
-# All records for these patients
-midas15[Patient_ID %in% Patient_ID[is.na(patbdte)]]
-# There are 8 patients with missing birthday records; REMOVE THEM
-midas15$Patient_ID[is.na(midas15$patbdte)]
-midas15 <- subset(midas15, 
-                  !(Patient_ID %in% Patient_ID[is.na(patbdte)]))
-summary(midas15$patbdte)
-
+# Admission dates
+summary(midas15$ADMDAT)
+# From 1985-03-20 to 2015-12-31
 # Keep only records from 01/01/1995 (admission dates)
 midas15 <- subset(midas15, ADMDAT >= "1995-01-01")
 
 # Remove records with discarge date before admission
 midas15[which(midas15$ADMDAT > midas15$DSCHDAT), ]
-midas15 <- subset(midas15, ADMDAT <= DSCHDAT)
+# None
 
 range(midas15$ADMDAT)
+# "1995-01-01" "2015-12-31"
 range(midas15$DSCHDAT)
+# "1995-01-01" "2016-02-09"
 
-# Remove anybody who was younger than 18 at any admisson
-midas15[, AGE := floor(as.numeric(difftime(ADMDAT, 
-                                           patbdte,
-                                           units = "days"))/365.25)]
+range(midas15$AGE)
+# 18 to 124
 hist(midas15$AGE, 100)
-id.rm <- midas15$Patient_ID[midas15$AGE < 18]
-midas15 <- subset(midas15, !(Patient_ID %in% id.rm))
-hist(midas15$AGE, 100)
-gc()
 
-# Number of hospitals----
-unique(midas15$HOSP)
-length(unique(midas15$HOSP))
-table(midas15$HOSP)
-sum(is.na(midas15$HOSP))
-# 94 + 1(#2000, error code?)
-
-# Convert to factors----
-# Sex----
-midas15[, SEX := factor(SEX, levels = c("F", "M"))]
-
-# Race----
-table(midas15$RACE)
-midas15$RACE1 <- "Other"
-midas15$RACE1[midas15$RACE == 1] <- "White"
-midas15$RACE1[midas15$RACE == 2] <- "Black"
-midas15[, RACE1 := factor(RACE1,
-                          levels = c("White",
-                                     "Black",
-                                     "Other"))]
-table(midas15$RACE1)
-midas15[, RACE := NULL]
-names(midas15)[ncol(midas15)] <- "RACE"
-
-# Primary insurance----
-write.csv(100*table(midas15$PRIME)/nrow(midas15), 
-          file = "tmp/prime.csv")
-midas15$PRIME[(midas15$PRIME %in% c("BLUE CROSS PLANS",
-                                    "HMO"))] <- "COMMERCIAL"
-
-midas15$PRIME[!(midas15$PRIME %in% c("medicare",
-                                     "COMMERCIAL"))] <- "medicaid/self-pay/other"
-midas15$PRIME <- factor(midas15$PRIME,
-                        levels = c("medicare",
-                                   "COMMERCIAL",
-                                   "medicaid/self-pay/other"))
-100*table(midas15$PRIME)/nrow(midas15)
-gc()
-
-# Hispanic----
-table(midas15$HISPAN)
-midas15$HISP <- "Hispanic"
-midas15$HISP[midas15$HISPAN %in% c(".", "9", "A")] <- "Unknown"
-midas15$HISP[midas15$HISPAN == "0"] <- "Non-hispanic"
-midas15$HISP <- factor(midas15$HISP,
-                       levels = c("Hispanic",
-                                  "Non-hispanic",
-                                  "Unknown"))
-100*table(midas15$HISP)/nrow(midas15)
-midas15[, HISPAN := NULL]
-names(midas15)[ncol(midas15)] <- "HISPAN"
-gc()
-
-summary(midas15)
-gc()
+# NEW (07/22/2017): keep inpatient records only
+midas15 <- droplevels(subset(midas15,
+                             PAT_TYPE %in% c(-1, 0)))
 
 # Sort----
 setkey(midas15,
        Patient_ID,
        ADMDAT)
+summary(midas15)
+gc()
 
 #**********************************************************
 # Separate diagnostic codes (DX1:DX9)
@@ -152,26 +85,15 @@ dx.1.3[, cnames[-1] := lapply(dx.1.3[, cnames[-1], with = FALSE],
 gc()
 
 save(midas15, dx, dx.1.3,  
-     file = file.path(DATA_HOME, "midas15_dakota_05052017.RData"), 
+     file = file.path(DATA_HOME, "midas15_dakota_07222017.RData"), 
      compress = FALSE)
 
 #**********************************************************
 # PART II----
-DATA_HOME <- "C:/Users/ds752/Documents/git_local/data/dakota"
-require(data.table)
-
-load(file.path(DATA_HOME, "midas15_dakota_05052017.RData"))
-range(midas15$ADMDAT)
-range(midas15$DSCHDAT)
-
+load(file.path(DATA_HOME, "midas15_dakota_07222017.RData"))
 # CHECKPOINT: is total bill different for men and women?
 # Restrict total bill to $10^2 - $10^6 interval
 hist(log10(midas15$TOTBIL), 100)
-
-tmp <- droplevels(subset(midas15, TOTBIL >= 10^2 & TOTBIL <= 10^6))
-boxplot(log10(tmp$TOTBIL) ~ tmp$SEX)
-rm(tmp)
-gc()
 
 # Vascular Disease: Miocardial Infarction----
 # 410 Acute myocardial infarction
@@ -223,12 +145,6 @@ midas15[, ami := (rowSums(dx.1.3 == "410") > 0)]
 addmargins(table(ami = midas15$ami,
                  ami.dx1 = midas15$ami.dx1))
 
-# CHECKPOINT: is total bill higher for AMI admissions?
-tmp <- droplevels(subset(midas15, TOTBIL >= 10^2 & TOTBIL <= 10^5))
-boxplot(log10(tmp$TOTBIL) ~ tmp$ami.dx1)
-rm(tmp)
-gc()
-
 # Keep patients who were admitted for AMI from 01/01/2000 onward
 id.keep <- unique(midas15$Patient_ID[midas15$ami.dx1 &
                                        midas15$ADMDAT >= "2000-01-01"])
@@ -236,13 +152,13 @@ dt1 <- subset(midas15,
               Patient_ID %in% id.keep)
 setkey(dt1)
 length(unique(dt1$Patient_ID))
-# 2,101,612 records for 241,540 patients
+# 1,644,116 records for 237,438 patients
 
 # Same for DXs and PROCs
 dx <- subset(dx, 
              Patient_ID %in% id.keep)
 dx.1.3 <- subset(dx.1.3, 
-                 Patient_ID %in% id.keep)
+                Patient_ID %in% id.keep)
 rm(midas15)
 gc()
 
@@ -458,12 +374,18 @@ gc()
 ## 272.2 Mixed hyperlipidemia
 ## 272.3 Hyperchylomicronemia
 ## 272.4 Other and unspecified hyperlipidemia
-## 272.5 Lipoprotein deficiencies
-## 272.6 Lipodystrophy
-## 272.7 Lipidoses
+## 272.5 Lipoprotein deficiencies (REMOVED, 07/21/2017, JBK)
+## 272.6 Lipodystrophy (REMOVED, 07/21/2017, JBK)
+## 272.7 Lipidoses (REMOVED, 07/21/2017, JBK)
 ## 272.8 Other disorders of lipoid metabolism
 ## 272.9 Unspecified disorder of lipoid metabolism
-dt1[, lipid := (rowSums(dx.1.3 == "272", na.rm = TRUE) > 0)]
+dt1[, lipid := (rowSums(data.table(rowSums(dx == "2720", na.rm = TRUE),
+                                   rowSums(dx == "2721", na.rm = TRUE),
+                                   rowSums(dx == "2722", na.rm = TRUE),
+                                   rowSums(dx == "2723", na.rm = TRUE),
+                                   rowSums(dx == "2724", na.rm = TRUE),
+                                   rowSums(dx == "2728", na.rm = TRUE),
+                                   rowSums(dx == "2729", na.rm = TRUE))) > 0)]
 table(dt1$lipid)
 gc()
 
@@ -498,16 +420,12 @@ sum(dt1$current)
 dt1 <- droplevels(dt1)
 summary(dt1)
 save(dt1, 
-     file = file.path(DATA_HOME, "dt1_05052017.RData"),
+     file = file.path(DATA_HOME, "dt1_07222017.RData"),
      compress = FALSE)
 
 #**********************************************************
 # PART III----
-DATA_HOME <- "C:/Users/ds752/Documents/git_local/data/dakota"
-require(data.table)
-require(ggplot2)
-
-load(file.path(DATA_HOME, "dt1_05052017.RData"))
+load(file.path(DATA_HOME, "dt1_07222017.RData"))
 
 # Outcomes and histories (prior to 1st PCI)----
 system.time(
@@ -531,7 +449,7 @@ system.time(
                    current,
                    ami.dx1,
                    ami,
-                   post.ami = sum(ami.dx1 & 
+                   post.ami.dx1 = sum(ami.dx1 & 
                                     !(prior | current) &
                                     (difftime(ADMDAT,
                                               first,
@@ -539,7 +457,7 @@ system.time(
                                     (is.na(NEWDTD) | (difftime(NEWDTD,
                                                                ADMDAT,
                                                                units = "days")) > 0)) > 0,
-                   post.ami.dat = min(ADMDAT[ami.dx1 & 
+                   post.ami.dx1.dat = min(ADMDAT[ami.dx1 & 
                                                !(prior | current) &
                                                (difftime(ADMDAT,
                                                          first,
@@ -548,34 +466,10 @@ system.time(
                                                                           ADMDAT,
                                                                           units = "days")) > 0)],
                                       na.rm = TRUE),
-                   post.ami.dx1.1y = sum(ami.dx1 & 
-                                           !(prior | current) &
-                                           (difftime(ADMDAT,
-                                                     first,
-                                                     units = "days") > 0) &
-                                           (difftime(ADMDAT,
-                                                     first,
-                                                     units = "days") < 366) &
-                                           (is.na(NEWDTD) | (difftime(NEWDTD,
-                                                                      ADMDAT,
-                                                                      units = "days")) > 0)) > 0,
-                   dead.1y = sum(!(prior | current) &
-                                   (difftime(NEWDTD,
-                                             first,
-                                             units = "days") > 0) &
-                                   (difftime(NEWDTD,
-                                             first,
-                                             units = "days") < 366),
-                                 na.rm = TRUE) > 0,
                    hami = (sum(ami & prior) > 0),
                    hchf.acute = (sum(chf.acute & prior) > 0),
                    chf.acute.current = (sum(chf.acute & current) > 0),
                    hchf.chron = (sum(chf.chron & (prior | current)) > 0), 
-                   hhyp.401 = (sum(hyp.401 & (prior | current)) > 0),
-                   hhyp.402 = (sum(hyp.402 & (prior | current)) > 0), 
-                   hhyp.403 = (sum(hyp.403 & (prior | current)) > 0),
-                   hhyp.404 = (sum(hyp.404 & (prior | current)) > 0), 
-                   hhyp.405 = (sum(hyp.405 & (prior | current)) > 0),
                    hhyp = (sum(hyp & (prior | current)) > 0), 
                    hdiab = (sum(diab & (prior | current)) > 0), 
                    hcld = (sum(cld & (prior | current)) > 0),
@@ -597,7 +491,7 @@ sum(case$post.ami)
 
 # If the are are more than 1 records of 1st MI admissions per person,
 nrow(case) - length(unique(case$Patient_ID))
-# Remove 815patient with duplicate records
+# Remove 567 patient with duplicate records
 case <- case[!(Patient_ID %in% Patient_ID[duplicated(Patient_ID)]), ]
 summary(case)
 
@@ -611,15 +505,40 @@ case[, hami := NULL]
 # MI discharges
 t1 <- table(case$dschyear,
             case$ami.dx1)
-t1
-plot(t1[, 1] ~ as.numeric(rownames(t1)), 
-     type = "b",
-     xlab = "Year",
-     ylab = "Number of MI Discharges (DX1 Only)")
+t1 <- data.table(Year = as.numeric(rownames(t1)),
+                 Count = t1[, 1])
 
+t1
+
+# Plot number of AMI admissions over time
+p1 <- ggplot(data = t1,
+             aes(x = Year,
+                 y = Count)) +
+  geom_line(size = 0.5,
+            color = "blue") +
+  geom_point(size = 2,
+             shape = 21,
+             fill = "blue") +
+  scale_x_continuous(breaks = unique(t1$Year),
+                     labels = unique(t1$Year)) +
+  ggtitle("Number of Discharges After 1st AMI Over Time") +
+  theme(axis.text.x = element_text(angle = 45,
+                                   hjust = 1),
+        plot.title = element_text(hjust = 0.5))
+print(p1)
+
+png(filename = "tmp/ami_adm_over_time.png",
+     height = 4,
+     width = 5,
+     units = 'in',
+     res = 300)
+print(p1)
+graphics.off()
+
+# Save cases----
 save(case, 
-     file = file.path(DATA_HOME, "case_05122017.RData"),
+     file = file.path(DATA_HOME, "case_07222017.RData"),
      compress = FALSE)
 write.csv(case,
-          file = file.path(DATA_HOME, "case_05122017.csv"),
+          file = file.path(DATA_HOME, "case_07222017.csv"),
           row.names = FALSE)
