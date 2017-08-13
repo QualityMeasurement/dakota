@@ -100,7 +100,7 @@ dt1$cvdead[dt1$dead & substr(dt1$CAUSE,1, 1) == "I"] <- TRUE
 
 # Days to CV death----
 dt1$days2cvdeath <- dt1$days2death
-dt1$NEWDTD[!dt1$cvdead] <- as.Date("2016-01-01")
+dt1$days2cvdeath[!dt1$cvdead] <- as.Date("2016-01-01")
 
 # CV death vs All-cause death----
 t1 <- table(all_cause_death = dt1$dead,
@@ -129,12 +129,217 @@ dt1$days2mi2 <- as.numeric(as.character(difftime(dt1$post.ami.dx1.dat,
 hist(dt1$days2mi2, 100)
 summary(dt1$days2mi2)
 
-CONTINUE HERE! (07/22/2017)
+dt1$DEC = round(dt1$AGE/10)
+
+# Part II: Models----
+# 1. Logistic models for 30-day AMI readmission, aspirin discharge----
+# NOTE: the denominator might include people who did not survive the 30-day period
+dt1$ami.readm.30 <- FALSE
+dt1$ami.readm.30[dt1$days2mi2 < 31] <- TRUE
+dt1$ami.readm.30 <- factor(dt1$ami.readm.30)
+# a. Outcome vs. scores----
+m1a <- glm(ami.readm.30 ~ `Asprin Discharge (%)`,
+           family = binomial(logit),
+           data = dt1)
+s1a <- summary(m1a)
+s1a
+coeff <- s1a$coefficients
+res1a <- data.table(nn = rownames(coeff),
+                    est = round(exp(coeff[, 1]), 3),
+                    ub = round(exp(coeff[, 1] + 1.96*coeff[, 2]), 3),
+                    lb = round(exp(coeff[, 1] - 1.96*coeff[, 2]), 3),
+                    pval = round(coeff[, 4], 3))
+res1a <- res1a[-1, ]
+res1a
+res1a.plot <- res1a
+
+res1a.plot$nn <- factor(res1a.plot$nn,
+                       levels = res1a.plot$nn)
+
+p1a <- ggplot(res1a.plot, 
+             aes(x = nn, 
+                 y = est)) + 
+  geom_point(size = 2) +
+  geom_errorbar(aes(ymin = lb, 
+                    ymax = ub), 
+                width = .1) +
+  geom_hline(yintercept = 1,
+             linetype = "dashed") +
+  scale_x_discrete("") +
+  scale_y_continuous("Odds Ratio",
+                     limits = c(min(res1c$lb)-0.2, max(res1c$ub)+0.2),
+                     breaks = seq(min(res1c$lb)-0.2, max(res1c$ub)+0.2,
+                                  by = 0.1)) +
+  ggtitle("1-Month Risk of AMI Readmission") +
+  theme(axis.text.x = element_text(angle = 45,
+                                   hjust = 1),
+        plot.title = element_text(hjust = 0.5))
+p1a
+
+
+m1b <- glm(ami.readm.30 ~ Teach,
+           family = binomial(logit),
+           data = dt1)
+s1b <- summary(m1b)
+s1b
+coeff <- s1b$coefficients
+res1b <- data.table(nn = rownames(coeff),
+                    est = round(exp(coeff[, 1]), 3),
+                    ub = round(exp(coeff[, 1] + 1.96*coeff[, 2]), 3),
+                    lb = round(exp(coeff[, 1] - 1.96*coeff[, 2]), 3),
+                    pval = round(coeff[, 4], 3))
+res1b <- res1b[-1, ]
+res1b
+res1b.plot <- res1b
+
+res1b.plot$nn <- factor(res1b.plot$nn,
+                        levels = res1b.plot$nn)
+
+p1b <- ggplot(res1b.plot, 
+              aes(x = nn, 
+                  y = est)) + 
+  geom_point(size = 2) +
+  geom_errorbar(aes(ymin = lb, 
+                    ymax = ub), 
+                width = .1) +
+  geom_hline(yintercept = 1,
+             linetype = "dashed") +
+  scale_x_discrete("") +
+  scale_y_continuous("Odds Ratio",
+                     limits = c(min(res1c$lb)-0.2, max(res1c$ub)+0.2),
+                     breaks = seq(min(res1c$lb)-0.2, max(res1c$ub)+0.2,
+                                  by = 0.1)) +
+  ggtitle("1-Month Risk of AMI Readmission") +
+  theme(axis.text.x = element_text(angle = 45,
+                                   hjust = 1),
+        plot.title = element_text(hjust = 0.5))
+p1b
+
+
+m1c <- glm(ami.readm.30 ~ `Asprin Discharge (%)`+
+             Teach +
+             SEX +
+             DEC +
+             PRIME +
+             RACE +  
+             HISPAN,
+           family = binomial(logit),
+           data = dt1)
+s1c <- summary(m1c)
+s1c
+
+coeff <- s1c$coefficients
+res1c <- data.table(nn = rownames(coeff),
+                    est = round(exp(coeff[, 1]), 3),
+                    ub = round(exp(coeff[, 1] + 1.96*coeff[, 2]), 3),
+                    lb = round(exp(coeff[, 1] - 1.96*coeff[, 2]), 3),
+                    pval = round(coeff[, 4], 3))
+res1c <- res1c[-c(1,5), ]
+res1c
+res1c.plot <- res1c
+
+res1c.plot$nn <- factor(res1c.plot$nn,
+                        levels = res1c.plot$nn)
+
+p1c <- ggplot(res1c.plot, 
+              aes(x = nn, 
+                  y = est)) + 
+  geom_point(size = 2) +
+  geom_errorbar(aes(ymin = lb, 
+                    ymax = ub), 
+                width = .1) +
+  geom_hline(yintercept = 1,
+             linetype = "dashed") +
+  scale_x_discrete("") +
+  scale_y_continuous("Odds Ratio",
+                     limits = c(min(res1c$lb)-0.2, max(res1c$ub)+0.2),
+                     breaks = seq(min(res1c$lb)-0.2, max(res1c$ub)+0.2,
+                                  by = 0.1)) +
+  ggtitle("1-Month Risk of AMI Readmission") +
+  theme(axis.text.x = element_text(angle = 45,
+                                   hjust = 1),
+        plot.title = element_text(hjust = 0.5))
+p1c
+
+m1d <- glm(ami.readm.30 ~ `Asprin Discharge (%)`+
+             Teach +
+             SEX +
+             DEC +
+             PRIME +
+             RACE +  
+             HISPAN +
+             hchf.acute +
+             hchf.chron +
+             hhyp +
+             hdiab +
+             hcld +
+             hckd +
+             hcopd +
+             hlipid,
+           family = binomial(logit),
+           data = dt1)
+
+s1d <- summary(m1d)
+s1d
+
+coeff <- s1d$coefficients
+res1d <- data.table(nn = rownames(coeff),
+                    est = round(exp(coeff[, 1]), 3),
+                    ub = round(exp(coeff[, 1] + 1.96*coeff[, 2]), 3),
+                    lb = round(exp(coeff[, 1] - 1.96*coeff[, 2]), 3),
+                    pval = round(coeff[, 4], 3))
+res1d <- res1d[-c(1,5), ]
+res1d
+res1d.plot <- res1d
+
+res1d.plot$nn <- factor(res1d.plot$nn,
+                        levels = res1d.plot$nn)
+
+p1d <- ggplot(res1d.plot, 
+              aes(x = nn, 
+                  y = est)) + 
+  geom_point(size = 2) +
+  geom_errorbar(aes(ymin = lb, 
+                    ymax = ub), 
+                width = .1) +
+  geom_hline(yintercept = 1,
+             linetype = "dashed") +
+  scale_x_discrete("") +
+  scale_y_continuous("Odds Ratio",
+                     limits = c(min(res1c$lb)-0.2, max(res1c$ub)+0.2),
+                     breaks = seq(min(res1c$lb)-0.2, max(res1c$ub)+0.2,
+                                  by = 0.1)) +
+  coord_flip()
+  ggtitle("1-Month Risk of AMI Readmission") +
+  theme(axis.text.x = element_text(angle = 45,
+                                   hjust = 1),
+        plot.title = element_text(hjust = 0.5))
+p1d
+
+
+
+CONTINUE HERE! (08/11/2017)
 2. Define a mulilevel responses for 30, 90, 180 days and 1 year for all-cause death, CV death and AMI readmission.  
 3. See notes form 07/21/2017 meeting in README file for more
 
 dt1$HOSP <- factor(dt1$HOSP)
-dt1$dschyear <- factor(dschyear)
+dt1$dschyear <- factor(dt1$dschyear)
+
+
+dt1$ami.or.cv.death <- FALSE
+dt1$ami.or.cv.death[dt1$days2cvdeath < 31 |
+                      dt1$days2mi2 < 31] <- TRUE
+table(dt1$ami.or.cv.death)
+
+
+
+
+
+
+
+
+
+
 
 Surv(dt1$days2mi2, dt1$mi2.dx1)
 m0 <- coxph(Surv(days2mi2, mi2.dx1) ~ HOSP*dschyear,
@@ -182,8 +387,20 @@ summary(dt1)
 table(dt2$income.cat)
 
 # a. AMI readmission within 1 year of first MI----
-m1 <- glm(post.ami.dx1.1y ~ income.cat +
-            bill +
+
+dt1$days2mi_1m = FALSE
+dt1[dt1$days2mi2 <= 30,]$days2mi_1m = TRUE
+dt1$days2mi_3m = FALSE
+dt1[dt1$days2mi2 <= 60,]$days2mi_3m = TRUE
+dt1$days2mi_6m = FALSE
+dt1[dt1$days2mi2 <= 180,]$days2mi_6m = TRUE
+dt1$days2mi_1y = FALSE
+dt1[dt1$days2mi2 <= 365,]$days2mi_1y = TRUE
+
+dt1$days2death_1y = FALSE
+dt1[dt1$days2cvdeath <= 365,]$days2death_1y = TRUE
+
+m1 <- glm(dt1$days2death_1y ~ 
             dschyear +
             SEX + 
             RACE + 
@@ -191,7 +408,7 @@ m1 <- glm(post.ami.dx1.1y ~ income.cat +
             dec +
             PRIME,
           family = binomial(logit),
-          data = dt2)
+          data = dt1)
 s1 <- summary(m1)
 s1
 coeff <- s1$coefficients
@@ -202,6 +419,22 @@ res1 <- data.table(nn = rownames(coeff),
                   pval = round(coeff[, 4], 3))
 res1 <- res1[-1, ]
 res1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Plot ORs----
 res1.plot <- res1[-c(3, 6, 8, 11),]
@@ -218,6 +451,7 @@ res1.plot$nn <- factor(res1.plot$nn,
 p1 <- ggplot(res1.plot, 
              aes(x = nn, 
                  y = est)) + 
+  coord_flip() +
   geom_point(size = 2) +
   geom_errorbar(aes(ymin = lb, 
                     ymax = ub), 
