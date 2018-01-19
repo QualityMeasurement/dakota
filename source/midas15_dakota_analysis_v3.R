@@ -28,12 +28,12 @@ require(knitr)
 ## a. MIDAS data----
 # Load data
 load(file.path(DATA_HOME, "case_07222017.RData"))
-
+load("case_07222017.RData")
 ## b. Myocardial Infarction (MI) scores----
 # CSV saved from an Excel file on 06/02/2017
 scores.mi <- fread(file.path(DATA_HOME,
                              "NJ HOSPITALS_Heart Attack Scores 2017.csv"))
-
+scores.mi <- fread("NJ HOSPITALS_Heart Attack Scores 2017.csv")
 # Convert variables
 names(scores.mi)
 scores.mi$`Hospital Division` <- as.numeric(as.character(scores.mi$`Hospital Division`))
@@ -167,8 +167,8 @@ p1a <- ggplot(res1a.plot,
              linetype = "dashed") +
   scale_x_discrete("") +
   scale_y_continuous("Odds Ratio",
-                     limits = c(min(res1c$lb)-0.2, max(res1c$ub)+0.2),
-                     breaks = seq(min(res1c$lb)-0.2, max(res1c$ub)+0.2,
+                     limits = c(min(res1a$lb)-0.2, max(res1a$ub)+0.2),
+                     breaks = seq(min(res1a$lb)-0.2, max(res1a$ub)+0.2,
                                   by = 0.1)) +
   ggtitle("1-Month Risk of AMI Readmission") +
   theme(axis.text.x = element_text(angle = 45,
@@ -177,7 +177,7 @@ p1a <- ggplot(res1a.plot,
 p1a
 
 
-m1b <- glm(ami.readm.30 ~ Teach,
+m1b <- glm(ami.readm.30 ~ `Asprin Discharge (%)` + Teach,
            family = binomial(logit),
            data = dt1)
 s1b <- summary(m1b)
@@ -206,8 +206,8 @@ p1b <- ggplot(res1b.plot,
              linetype = "dashed") +
   scale_x_discrete("") +
   scale_y_continuous("Odds Ratio",
-                     limits = c(min(res1c$lb)-0.2, max(res1c$ub)+0.2),
-                     breaks = seq(min(res1c$lb)-0.2, max(res1c$ub)+0.2,
+                     limits = c(min(res1b$lb)-0.2, max(res1b$ub)+0.2),
+                     breaks = seq(min(res1b$lb)-0.2, max(res1b$ub)+0.2,
                                   by = 0.1)) +
   ggtitle("1-Month Risk of AMI Readmission") +
   theme(axis.text.x = element_text(angle = 45,
